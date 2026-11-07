@@ -2,7 +2,10 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""Generate icons/icon{16,48,128}.png: a ">>>" glyph on a rounded dark tile.
+"""Generate icons/icon{16,48,128}.png: a white ">>>" on a WebAssembly-style tile.
+
+The tile echoes the WebAssembly logo: a purple square with a semicircular
+notch cut out of the top edge.
 
 Usage:
     uv run scripts/gen_icons.py
@@ -23,13 +26,17 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ICONS_DIR = PROJECT_ROOT / "icons"
 
 SUPERSAMPLE = 4  # samples per axis per pixel
-BACKGROUND_RGB = (0x30, 0x36, 0x3D)  # dark slate tile
-GLYPH_RGB = (0xFF, 0xD3, 0x43)  # Python-ish yellow
-CORNER_RADIUS_FRAC = 0.18  # of the icon size
+BACKGROUND_RGB = (0x65, 0x4F, 0xF0)  # WebAssembly purple (#654FF0)
+GLYPH_RGB = (0xFF, 0xFF, 0xFF)  # white
+CORNER_RADIUS_FRAC = 0.10  # of the icon size
+# Semicircular notch centred on the top edge, as in the WebAssembly logo.
+NOTCH_CENTER = (0.5, 0.0)
+NOTCH_RADIUS = 0.17
 CHEVRON_COUNT = 3
 # Glyph geometry in unit coordinates (0..1 of the icon size).
 GLYPH_LEFT = 0.14
 GLYPH_RIGHT = 0.86
+GLYPH_CENTER_Y = 0.58  # below centre, to clear the notch
 CHEVRON_HALF_HEIGHT = 0.20
 CHEVRON_WIDTH_FRAC = 0.62  # chevron width as a fraction of the per-chevron pitch
 STROKE_WIDTH = 0.085
@@ -61,7 +68,7 @@ def chevron_segments() -> list[tuple[Point, Point]]:
     """Segments (unit coordinates) of CHEVRON_COUNT '>' shapes side by side."""
     pitch = (GLYPH_RIGHT - GLYPH_LEFT) / CHEVRON_COUNT
     width = pitch * CHEVRON_WIDTH_FRAC
-    mid_y = 0.5
+    mid_y = GLYPH_CENTER_Y
     segments: list[tuple[Point, Point]] = []
     for i in range(CHEVRON_COUNT):
         x0 = GLYPH_LEFT + i * pitch + (pitch - width) / 2
@@ -71,8 +78,11 @@ def chevron_segments() -> list[tuple[Point, Point]]:
     return segments
 
 
-def inside_rounded_square(x: float, y: float, radius: float) -> bool:
-    """(x, y) in unit coordinates; true inside the rounded tile."""
+def inside_tile(x: float, y: float, radius: float) -> bool:
+    """(x, y) in unit coordinates; true inside the rounded tile minus the notch."""
+    nx, ny = NOTCH_CENTER
+    if (x - nx) ** 2 + (y - ny) ** 2 <= NOTCH_RADIUS * NOTCH_RADIUS:
+        return False
     cx = min(max(x, radius), 1.0 - radius)
     cy = min(max(y, radius), 1.0 - radius)
     return (x - cx) ** 2 + (y - cy) ** 2 <= radius * radius
@@ -93,7 +103,7 @@ def render(size: int) -> bytes:
                 for sx in range(SUPERSAMPLE):
                     x = (px + (sx + 0.5) / SUPERSAMPLE) / size
                     y = (py + (sy + 0.5) / SUPERSAMPLE) / size
-                    if not inside_rounded_square(x, y, CORNER_RADIUS_FRAC):
+                    if not inside_tile(x, y, CORNER_RADIUS_FRAC):
                         continue
                     tile_hits += 1
                     if min(segment_distance((x, y), a, b) for a, b in segments) <= half_stroke:
