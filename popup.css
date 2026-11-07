@@ -1,0 +1,108 @@
+/* Tunable sizes. Chrome allows popups up to 800x600. */
+:root {
+  --popup-width: 400px;
+  --popup-height: 100px;
+  --font-size: 13px;
+  --line-height: 1.25;
+  --padding: 3px 5px;
+  --font-family: ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1e1e1e;
+  --dim: #8a8a8a;
+  --stderr: #b3261e;
+  --selection: #b4d5fe;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --fg: #d4d4d4;
+    --dim: #7f7f7f;
+    --stderr: #f48771;
+    --selection: #264f78;
+  }
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: var(--popup-width);
+  height: var(--popup-height);
+  /* clip, not hidden: hidden roots can still be scrolled programmatically
+     (focus, scrollIntoView), which shifted the first line out of view. */
+  overflow: clip;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  line-height: var(--line-height);
+}
+
+::selection {
+  background: var(--selection);
+}
+
+#scroll {
+  box-sizing: border-box;
+  height: 100%;
+  padding: var(--padding);
+  overflow-y: auto;
+  overflow-x: hidden;
+  cursor: text;
+}
+
+pre {
+  margin: 0;
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+#banner:empty,
+#transcript:empty {
+  display: none;
+}
+
+.dim,
+.info {
+  color: var(--dim);
+}
+
+.stderr {
+  color: var(--stderr);
+}
+
+#input-row {
+  display: flex;
+  align-items: baseline;
+}
+
+#prompt {
+  flex: none;
+  white-space: pre;
+}
+
+#input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+}
+
+#measure {
+  /* Pinned to the top so it never extends the document below the popup. */
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  white-space: pre;
+  font: inherit;
+}

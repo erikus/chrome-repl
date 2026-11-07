@@ -1,0 +1,8 @@
+{
+  "name": "python-repl-chrome-smoke",
+  "private": true,
+  "description": "Local-only deps for tests/chrome-smoke.mjs; copied to .cache/chrome-test/package.json by `make smoke`.",
+  "dependencies": {
+    "puppeteer": "25.16.0"
+  }
+}

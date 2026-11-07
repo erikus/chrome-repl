@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Python REPL</title>
+  <link rel="stylesheet" href="popup.css">
+  <script type="module" src="popup.js"></script>
+</head>
+<body>
+  <div id="scroll">
+    <pre id="banner" class="dim"></pre>
+    <pre id="transcript"></pre>
+    <pre id="notice" class="dim" hidden></pre>
+    <div id="input-row">
+      <pre id="prompt">&gt;&gt;&gt; </pre>
+      <input id="input" type="text" autocomplete="off" autocapitalize="off"
+             autocorrect="off" spellcheck="false" aria-label="Python input">
+    </div>
+  </div>
+  <span id="measure" aria-hidden="true">MMMMMMMMMM</span>
+</body>
+</html>
