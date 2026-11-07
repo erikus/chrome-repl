@@ -56,6 +56,7 @@ conflicts with another one. Check or change it at
 | `Esc` (menu open) | Close the menu without inserting. |
 | `↑` / `↓` | Move through input history (when the menu is closed). |
 | `Ctrl-L` | Clear the screen. Variables and history are kept. |
+| `Cmd-C` (macOS) / `Ctrl-Shift-C` with nothing selected | Copy the last output (as shown, e.g. strings keep their quotes). With a selection, copies the selection as usual. |
 | `Ctrl-D` on an empty line, `exit()`, `quit()` | Reset: restart the interpreter, clear the transcript and the history. |
 | `Ctrl-C` while idle | Discard the current line and pending multi-line source (`KeyboardInterrupt`). |
 | `Ctrl-C` while running | Interrupt the running code with `KeyboardInterrupt`; variables are kept. If Python does not stop within 1 s (e.g. inside a long C call) it is restarted and the session is lost. |

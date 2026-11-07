@@ -189,6 +189,23 @@ async function main() {
       if (!out.includes(">>> 2**10\n1024\n")) throw new Error(JSON.stringify(out));
     });
 
+    await check("copy-last-output shortcut puts the last result on the clipboard", async () => {
+      await browser.defaultBrowserContext().overridePermissions(
+        `chrome-extension://${extId}`, ["clipboard-read", "clipboard-sanitized-write"]);
+      await submit(popup, "")
+        .catch(() => {}); // a blank Enter must not hide the last answer
+      const mods = process.platform === "darwin" ? ["Meta"] : ["Control", "Shift"];
+      for (const m of mods) await popup.keyboard.down(m);
+      await popup.keyboard.press("KeyC");
+      for (const m of mods.reverse()) await popup.keyboard.up(m);
+      await popup.waitForFunction(
+        () => document.getElementById("notice").textContent === "copied last output",
+        { timeout: STEP_TIMEOUT_MS, polling: "mutation" });
+      const clip = await popup.evaluate(() => navigator.clipboard.readText());
+      if (clip !== "1024") throw new Error(`clipboard ${JSON.stringify(clip)}`);
+      return `clipboard "${clip}"`;
+    });
+
     await check("math. Tab opens a menu; typing filters; Enter accepts", async () => {
       const transcriptBefore = await transcript(popup);
       await page_type(popup, "math.");

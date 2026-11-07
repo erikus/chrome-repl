@@ -61,6 +61,7 @@ Record Chrome version, OS and date at the top of each run.
 - [ ] `Ctrl-L` clears the screen; `x` still works; `↑` still has history
       **(smoke)**. Verify on macOS that Control-L does not focus an address bar
       or open anything.
+- [ ] `Cmd-C` (macOS) / `Ctrl-Shift-C` with nothing selected copies the last output and shows "copied last output"; with text selected it copies the selection; after a traceback it still copies the last stdout
 - [ ] `Ctrl-D` on an empty line resets (transcript, history and variables
       gone, new banner). `Ctrl-D` with text on the line does nothing harmful
       (no bookmark dialog on Windows/Linux).

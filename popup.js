@@ -44,7 +44,13 @@ const CURSOR_KEYS_CLOSING_MENU = new Set(["ArrowLeft", "Home", "End", "PageUp", 
 const COMPLETE_TAB = "tab";
 const COMPLETE_REFRESH = "refresh";
 
+// How long the "copied" confirmation stays in the notice line.
+const COPY_NOTICE_MS = 1500;
+
 const TEXT_STARTING = "starting Python…";
+const TEXT_COPIED = "copied last output";
+const TEXT_NOTHING_TO_COPY = "no output to copy";
+const TEXT_COPY_FAILED = "copy failed";
 const TEXT_RUNNING_HINT = "running… Ctrl-C to interrupt";
 const TEXT_CONNECTING_AGAIN = "connection lost; reconnecting…";
 const TEXT_LINE_TOO_LONG = `line too long (max ${MAX_LINE_CHARS} characters); not run`;
@@ -106,6 +112,8 @@ let pendingComplete = null; // {requestId, value, cursor, reason}
 let menu = null;
 
 let localNotice = null; // transient message (rejections, local limits)
+let lastAnswer = ""; // stdout of the most recent execution that printed any
+let copyNoticeTimer = null;
 let stickToBottom = true;
 
 // ---- connection -------------------------------------------------------------
@@ -306,6 +314,60 @@ function renderTranscript(banner, entries) {
     frag.append(span);
   }
   el.transcript.replaceChildren(frag);
+  lastAnswer = lastOutputBlock(entries);
+}
+
+/**
+ * The stdout (results and prints) after the latest input line that produced
+ * any, exactly as shown, minus the trailing newline. Blank Enter presses
+ * after it don't hide it; stderr (tracebacks) and info lines are not answers.
+ */
+function lastOutputBlock(entries) {
+  let latest = "";
+  let current = "";
+  for (const entry of entries) {
+    if (entry.kind === "input") {
+      if (current !== "") latest = current;
+      current = "";
+    } else if (entry.kind === "stdout") {
+      current += entry.text;
+    }
+  }
+  if (current !== "") latest = current;
+  return latest.replace(/\n$/, "");
+}
+
+/** Cmd-C (macOS) / Ctrl-Shift-C (elsewhere) with nothing selected. */
+function isCopyAnswerKey(e) {
+  if (e.altKey || e.code !== "KeyC") return false;
+  return IS_MAC
+    ? e.metaKey && !e.ctrlKey && !e.shiftKey
+    : e.ctrlKey && e.shiftKey && !e.metaKey;
+}
+
+async function copyLastAnswer() {
+  let text;
+  if (lastAnswer === "") {
+    text = TEXT_NOTHING_TO_COPY;
+  } else {
+    try {
+      await navigator.clipboard.writeText(lastAnswer);
+      text = TEXT_COPIED;
+    } catch (err) {
+      console.warn("clipboard write failed", err);
+      text = TEXT_COPY_FAILED;
+    }
+  }
+  localNotice = text;
+  render();
+  if (copyNoticeTimer !== null) clearTimeout(copyNoticeTimer);
+  copyNoticeTimer = setTimeout(() => {
+    copyNoticeTimer = null;
+    if (localNotice === text) {
+      localNotice = null;
+      render();
+    }
+  }, COPY_NOTICE_MS);
 }
 
 function currentNotice() {
@@ -618,6 +680,14 @@ function isCtrl(e, letter) {
 
 function onKeyDown(e) {
   if (e.isComposing) return;
+
+  // Copy the last output, but only when nothing is selected: a selection
+  // keeps the normal copy behavior.
+  if (isCopyAnswerKey(e) && !hasTranscriptSelection() && !hasInputSelection()) {
+    e.preventDefault();
+    void copyLastAnswer();
+    return;
+  }
 
   if (isCtrl(e, "c")) {
     // Never hijack copy: Cmd-C on mac isn't matched by isCtrl; elsewhere,
