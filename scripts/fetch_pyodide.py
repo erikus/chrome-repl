@@ -25,6 +25,7 @@ import tarfile
 import tempfile
 import urllib.request
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path
 
 PYODIDE_VERSION = "314.0.7"  # Python 3.14.2
@@ -38,7 +39,124 @@ ZIP_COMPRESS_LEVEL = 9
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CACHE_DIR = PROJECT_ROOT / ".cache"
+NOTICES_CACHE_DIR = CACHE_DIR / "notices"
 VENDOR_DIR = PROJECT_ROOT / "vendor" / "pyodide"
+
+# The release tarball ships no license files, so the upstream notices for
+# everything in it are fetched separately, pinned to the exact revisions this
+# Pyodide release was built from (see cpython/Makefile and Makefile.envs in
+# the Pyodide repo at the tag) and SHA-256 verified like the tarball.
+# `make zip` puts the concatenation at the zip root.
+NOTICES_FILE = "THIRD_PARTY_NOTICES.txt"
+CPYTHON_TAG = "v3.14.2"
+EMSCRIPTEN_TAG = "5.0.3"
+LIBFFI_COMMIT = "f08493d249d2067c8b3207ba46693dd858f95db3"  # Pyodide cpython/Makefile
+HACL_STAR_COMMIT = "8ba599b2f6c9701b3dc961db895b0856a2210f76"  # CPython Modules/_hacl/refresh.sh
+RAW_GITHUB = "https://raw.githubusercontent.com"
+
+
+@dataclass(frozen=True)
+class Notice:
+    cache_name: str
+    title: str
+    url: str
+    sha256: str
+
+
+NOTICES = (
+    Notice(
+        "pyodide-LICENSE",
+        f"Pyodide {PYODIDE_VERSION} (pyodide.mjs, pyodide.asm.*, the _pyodide/pyodide Python packages and "
+        "the bundled hiwire library) -- Mozilla Public License 2.0.\n"
+        f"Source code form: https://github.com/pyodide/pyodide/tree/{PYODIDE_VERSION}",
+        f"{RAW_GITHUB}/pyodide/pyodide/{PYODIDE_VERSION}/LICENSE",
+        "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+    ),
+    Notice(
+        "cpython-LICENSE",
+        f"CPython {CPYTHON_TAG.removeprefix('v')} interpreter and standard library (python_stdlib.zip) -- "
+        "PSF License Agreement and historical licenses",
+        f"{RAW_GITHUB}/python/cpython/{CPYTHON_TAG}/LICENSE",
+        "b0e25a78cffb43f4d92de8b61ccfa1f1f98ecbc22330b54b5251e7b6ba010231",
+    ),
+    Notice(
+        "cpython-license.rst",
+        "CPython: licenses and acknowledgements for incorporated software (Mersenne Twister, SipHash, "
+        "dtoa, expat, libffi, zlib, libmpdec, mimalloc, Zstandard bindings, ...)",
+        f"{RAW_GITHUB}/python/cpython/{CPYTHON_TAG}/Doc/license.rst",
+        "c695d550b135e53e38807e76496d1db17d22c40e461d1f3f354c86188d3305dd",
+    ),
+    Notice(
+        "hacl-star-LICENSE",
+        "HACL* (hashlib/_blake2 primitives vendored in CPython Modules/_hacl)",
+        f"{RAW_GITHUB}/hacl-star/hacl-star/{HACL_STAR_COMMIT}/LICENSE",
+        "c5accbbd8546e94c34aed24afe689a617627d18eed5a6c48277e48db57c23851",
+    ),
+    Notice(
+        "libffi-LICENSE",
+        "libffi (compiled into pyodide.asm.wasm) -- MIT License",
+        f"{RAW_GITHUB}/libffi/libffi/{LIBFFI_COMMIT}/LICENSE",
+        "2c9c2acb9743e6b007b91350475308aee44691d96aa20eacef8e199988c8c388",
+    ),
+    Notice(
+        "zstd-LICENSE",
+        "Zstandard 1.5.7 (compiled into pyodide.asm.wasm) -- BSD License",
+        f"{RAW_GITHUB}/python/cpython-source-deps/zstd-1.5.7/LICENSE",
+        "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8",
+    ),
+    Notice(
+        "xz-COPYING",
+        "XZ Utils 5.2.2 / liblzma (compiled into pyodide.asm.wasm) -- public domain",
+        f"{RAW_GITHUB}/xz-mirror/xz/v5.2.2/COPYING",
+        "c4f8e14fafe458d84808a4cd8b69f94673ebe2bf8fc992291629a69ac12218f8",
+    ),
+    Notice(
+        "bzip2-LICENSE",
+        "bzip2 1.0.6 (Emscripten port, compiled into pyodide.asm.wasm) -- BSD-style License",
+        f"{RAW_GITHUB}/emscripten-ports/bzip2/1.0.6/LICENSE",
+        "4919cfb14a73cd64fcef67b107613970cf1659a09aa675dba31314f373bc7204",
+    ),
+    Notice(
+        "emscripten-LICENSE",
+        f"Emscripten {EMSCRIPTEN_TAG} runtime and JS glue (pyodide.asm.mjs) -- MIT / University of Illinois NCSA",
+        f"{RAW_GITHUB}/emscripten-core/emscripten/{EMSCRIPTEN_TAG}/LICENSE",
+        "620a78084fc7ca97c0b5dea9abf891f3ffcadfdbf305276f099c9c4e12fc1d86",
+    ),
+    Notice(
+        "musl-COPYRIGHT",
+        "musl libc (Emscripten's C library, compiled into pyodide.asm.wasm) -- MIT License",
+        f"{RAW_GITHUB}/emscripten-core/emscripten/{EMSCRIPTEN_TAG}/system/lib/libc/musl/COPYRIGHT",
+        "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af",
+    ),
+    Notice(
+        "libcxx-LICENSE.TXT",
+        "LLVM libc++ / libc++abi (compiled into pyodide.asm.wasm) -- Apache License 2.0 with LLVM Exceptions",
+        f"{RAW_GITHUB}/emscripten-core/emscripten/{EMSCRIPTEN_TAG}/system/lib/libcxx/LICENSE.TXT",
+        "539dd7aed86e8a4f12cbdd0e6c50c189c7d74847e4fecc64ce2c6ee3a01da38b",
+    ),
+    Notice(
+        "compiler-rt-LICENSE.TXT",
+        "LLVM compiler-rt (compiled into pyodide.asm.wasm) -- Apache License 2.0 with LLVM Exceptions",
+        f"{RAW_GITHUB}/emscripten-core/emscripten/{EMSCRIPTEN_TAG}/system/lib/compiler-rt/LICENSE.TXT",
+        "1a8f1058753f1ba890de984e48f0242a3a5c29a6a8f2ed9fd813f36985387e8d",
+    ),
+)
+
+NOTICES_HEADER = f"""\
+Third-party notices for Python REPL
+
+This extension bundles Pyodide {PYODIDE_VERSION} (CPython {CPYTHON_TAG.removeprefix('v')} compiled to
+WebAssembly with Emscripten {EMSCRIPTEN_TAG}), unmodified apart from removing unused
+standard-library modules from python_stdlib.zip. The upstream license texts
+for it and for the libraries compiled into pyodide.asm.wasm follow.
+
+SQLite 3.39.0 is also compiled into pyodide.asm.wasm; it is in the public
+domain (https://sqlite.org/copyright.html) and carries no license text.
+
+The extension's own code is MIT-licensed (see LICENSE in the source
+repository: https://github.com/erikus/chrome-repl).
+"""
+NOTICE_RULE = "=" * 78
 
 STDLIB_ZIP = "python_stdlib.zip"
 # Everything loadPyodide() reads at startup besides the stdlib zip. Verified by
@@ -179,23 +297,32 @@ def sha256_of(path: Path) -> str:
     return digest.hexdigest()
 
 
-def fetch_tarball() -> Path:
-    """Return the cached tarball, downloading it if missing or corrupt."""
-    CACHE_DIR.mkdir(exist_ok=True)
-    tarball = CACHE_DIR / TARBALL_NAME
-    if tarball.exists() and sha256_of(tarball) == TARBALL_SHA256:
-        print(f"using cached {tarball.relative_to(PROJECT_ROOT)}")
-        return tarball
-    print(f"downloading {TARBALL_URL}")
-    partial = tarball.with_suffix(tarball.suffix + ".part")
-    with urllib.request.urlopen(TARBALL_URL, timeout=DOWNLOAD_TIMEOUT_S) as resp, partial.open("wb") as out:
+def fetch_pinned(url: str, expected_sha256: str, dest: Path) -> Path:
+    """Return dest, downloading url into it if missing or corrupt."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists() and sha256_of(dest) == expected_sha256:
+        print(f"using cached {dest.relative_to(PROJECT_ROOT)}")
+        return dest
+    print(f"downloading {url}")
+    partial = dest.with_suffix(dest.suffix + ".part")
+    with urllib.request.urlopen(url, timeout=DOWNLOAD_TIMEOUT_S) as resp, partial.open("wb") as out:
         shutil.copyfileobj(resp, out)
     actual = sha256_of(partial)
-    if actual != TARBALL_SHA256:
+    if actual != expected_sha256:
         partial.unlink()
-        sys.exit(f"SHA-256 mismatch for {TARBALL_NAME}: expected {TARBALL_SHA256}, got {actual}")
-    partial.replace(tarball)
-    return tarball
+        sys.exit(f"SHA-256 mismatch for {url}: expected {expected_sha256}, got {actual}")
+    partial.replace(dest)
+    return dest
+
+
+def build_notices() -> str:
+    """Concatenate the pinned upstream license texts under NOTICES_HEADER."""
+    sections = [NOTICES_HEADER]
+    for notice in NOTICES:
+        path = fetch_pinned(notice.url, notice.sha256, NOTICES_CACHE_DIR / notice.cache_name)
+        text = path.read_text(encoding="utf-8").strip("\n")
+        sections.append(f"{NOTICE_RULE}\n{notice.title}\nLicense text from: {notice.url}\n{NOTICE_RULE}\n\n{text}\n")
+    return "\n\n".join(sections)
 
 
 def is_allowed(name: str) -> bool:
@@ -237,7 +364,8 @@ def main() -> None:
     parser.add_argument("--untrimmed", action="store_true", help="ship the full stdlib zip (for allowlist derivation)")
     args = parser.parse_args()
 
-    tarball = fetch_tarball()
+    tarball = fetch_pinned(TARBALL_URL, TARBALL_SHA256, CACHE_DIR / TARBALL_NAME)
+    notices = build_notices()
     VENDOR_DIR.parent.mkdir(exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix="pyodide.", dir=VENDOR_DIR.parent))
     try:
@@ -248,6 +376,7 @@ def main() -> None:
             full_zip = read_member(tar, STDLIB_ZIP)
         stdlib = full_zip if args.untrimmed else trim_stdlib(full_zip)
         (staging / STDLIB_ZIP).write_bytes(stdlib)
+        (staging / NOTICES_FILE).write_text(notices, encoding="utf-8")
         if VENDOR_DIR.exists():
             shutil.rmtree(VENDOR_DIR)
         staging.replace(VENDOR_DIR)

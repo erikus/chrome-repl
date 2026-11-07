@@ -37,7 +37,11 @@ make icons    # Generate icons/icon{16,48,128}.png via scripts/gen_icons.py (std
 make test     # Run Node test suite against the trimmed bundle
 make zip      # Package runtime files into dist/python-repl-<manifest version>.zip
 make screenshots  # Regenerate the README images in docs/screenshots/ (uses the smoke-test Chrome)
+make store-assets # Regenerate the Chrome Web Store screenshots and promo tile in docs/store/
 ```
+
+Chrome Web Store listing text, privacy answers, and the submission checklist
+are in [`docs/store-listing.md`](docs/store-listing.md).
 
 `vendor/`, `dist/`, and `.cache/` are generated at build time and gitignored.
 
@@ -90,6 +94,8 @@ noted.
   extension cannot read or interact with web pages.
 - **Ephemeral state:** Nothing is written to `chrome.storage` or disk. Session
   state lives strictly in memory and disappears on reset or browser restart.
+
+The privacy policy for the store listing is [`PRIVACY.md`](PRIVACY.md).
 
 ## Chrome Smoke Test
 
@@ -150,6 +156,12 @@ MIT (see [`LICENSE`](LICENSE)).
 
 Built artifacts (`vendor/pyodide/` and `dist/*.zip` produced by `make zip`)
 bundle third-party software downloaded at build time and not committed to this
-repository, including Pyodide (MPL-2.0), CPython and its standard library (PSF
-License), and libraries compiled into `pyodide.asm.wasm`. If you distribute the
-packaged zip, include the corresponding upstream license notices.
+repository: Pyodide (MPL-2.0), CPython and its standard library (PSF License),
+and the libraries compiled into `pyodide.asm.wasm` (Emscripten, musl, LLVM
+libc++/compiler-rt, libffi, zlib, bzip2, XZ, Zstandard, SQLite, HACL\*, and
+others). The release tarball ships no license files, so `make vendor` also
+downloads the upstream license texts, pinned to the revisions that Pyodide
+release was built from and SHA-256 verified (`NOTICES` in
+`scripts/fetch_pyodide.py`), and writes them to
+`vendor/pyodide/THIRD_PARTY_NOTICES.txt`. `make zip` places that file and this
+project's `LICENSE` at the root of the package.

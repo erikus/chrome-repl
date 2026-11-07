@@ -14,8 +14,11 @@ ZIP := $(DIST_DIR)/python-repl-$(VERSION).zip
 RUNTIME_FILES := manifest.json protocol.js background.js offscreen.html offscreen.js \
 	worker.js interrupt-buffer.js popup.html popup.js popup-lib.js popup.css
 SMOKE_DIR := .cache/chrome-test
+# Upstream license texts, written by scripts/fetch_pyodide.py next to the
+# runtime and placed at the zip root by `make zip`.
+NOTICES := $(VENDOR_DIR)/THIRD_PARTY_NOTICES.txt
 
-.PHONY: vendor icons test zip smoke screenshots clean-vendor clean-dist
+.PHONY: vendor icons test zip smoke screenshots store-assets clean-vendor clean-dist
 
 vendor: $(VENDOR_DIR)/pyodide.mjs
 
@@ -37,7 +40,8 @@ test: vendor
 zip: vendor icons
 	mkdir -p $(DIST_DIR)
 	rm -f $(ZIP)
-	zip -X -r $(ZIP) $(RUNTIME_FILES) $(ICONS) $(VENDOR_DIR) -x '*/.DS_Store'
+	zip -X -r $(ZIP) $(RUNTIME_FILES) $(ICONS) LICENSE $(VENDOR_DIR) -x '*/.DS_Store' -x $(NOTICES)
+	zip -X -j $(ZIP) $(NOTICES)
 	@echo "wrote $(ZIP)"
 
 # Chrome smoke test: puppeteer + Chrome for Testing, installed locally in
@@ -52,7 +56,12 @@ smoke: vendor icons $(SMOKE_DIR)/node_modules/puppeteer/package.json
 
 # README images in docs/screenshots/ (committed), from the same puppeteer setup.
 screenshots: vendor icons $(SMOKE_DIR)/node_modules/puppeteer/package.json
-	PUPPETEER_CACHE_DIR=$(CURDIR)/$(SMOKE_DIR)/browsers $(NODE) scripts/screenshots.mjs
+	PUPPETEER_CACHE_DIR=$(CURDIR)/$(SMOKE_DIR)/browsers $(NODE) scripts/screenshots.mjs readme
+
+# Chrome Web Store screenshots (1280x800) and promo tile (440x280) in
+# docs/store/ (committed); see docs/store-listing.md.
+store-assets: vendor icons $(SMOKE_DIR)/node_modules/puppeteer/package.json
+	PUPPETEER_CACHE_DIR=$(CURDIR)/$(SMOKE_DIR)/browsers $(NODE) scripts/screenshots.mjs store
 
 clean-vendor:
 	rm -rf $(VENDOR_DIR)

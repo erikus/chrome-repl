@@ -6,12 +6,13 @@
 - [x] **README screenshots.** `make screenshots` runs `scripts/screenshots.mjs`
   (a fixed session, scenes in light and dark) into `docs/screenshots/`.
 - [ ] **Publish to the Chrome Web Store.** Today users must install `uv`, build,
-  and load the extension unpacked. A listing needs: a developer account, the
-  `make zip` package (including the upstream license notices for Pyodide and
-  CPython), store screenshots (1280x800 or 640x400) and a 440x280 promo tile,
-  a privacy policy or disclosures (no data collected, no network access), and
-  a justification for the `offscreen` permission and `wasm-unsafe-eval`. Add an
-  install link to the README once it's live.
+  and load the extension unpacked. The package (with `THIRD_PARTY_NOTICES.txt`),
+  store assets (`make store-assets`), listing text, privacy answers and
+  `PRIVACY.md` are ready; see [`docs/store-listing.md`](docs/store-listing.md).
+  Remaining manual steps: register a developer account (US$5) and verify its
+  email; merge `PRIVACY.md` to `main` so the policy URL resolves; upload the
+  zip and assets and submit for review; once live, add the install link to the
+  README.
 - [x] Autocomplete UX for long candidate lists (e.g. `math.<tab><tab>`):
   replaced the transcript listing with a transient, filter-as-you-type menu
   above the input line.
