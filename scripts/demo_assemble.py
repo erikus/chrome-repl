@@ -22,7 +22,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageStat
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CAPTURE_ROOT = PROJECT_ROOT / ".cache" / "demo"
@@ -35,6 +35,11 @@ CORNER_RADIUS_PX = 30  # macOS window corner, a little generous
 # Where the corner fill colour is sampled, measured from each corner (x, y).
 TOP_CORNER_SAMPLE = (CORNER_RADIUS_PX, CORNER_RADIUS_PX // 2)
 BOTTOM_CORNER_SAMPLE = (CORNER_RADIUS_PX, CORNER_RADIUS_PX // 2)
+
+# Empty tab-strip area (left, top, right, bottom): right of the "+" button,
+# left of the window edge, above the toolbar.
+TAB_STRIP_BAND_PX = (900, 16, 1560, 64)
+TAB_STRIP_MAX_STDDEV = 3.0  # clean captures measure about 1; text behind is far above
 
 STORE_SIZE = (1280, 800)  # Chrome Web Store screenshot size
 GIF_WIDTH = 960
@@ -66,6 +71,24 @@ class Frame:
     image: Image.Image
     hold_ms: int
     caption: str | None
+
+
+def checked_capture(path: Path) -> Image.Image:
+    """Open a capture; fail if anything shows through the translucent tab strip.
+
+    The empty tab-strip area right of the "+" button should be a flat colour
+    (it blurs the opaque backdrop window from scripts/demo.mjs). Text or other
+    windows behind it show up as luminance variance.
+    """
+    image = Image.open(path)
+    band = image.convert("L").crop(TAB_STRIP_BAND_PX)
+    stddev = ImageStat.Stat(band).stddev[0]
+    if stddev > TAB_STRIP_MAX_STDDEV:
+        raise SystemExit(
+            f"{path.name}: tab strip is not uniform (luminance stddev {stddev:.1f} > {TAB_STRIP_MAX_STDDEV}); "
+            "something behind the Chrome window shows through"
+        )
+    return image
 
 
 def square_corners(image: Image.Image) -> Image.Image:
@@ -142,7 +165,7 @@ def build_gif() -> None:
     rgb_frames: list[Image.Image] = []
     durations: list[int] = []
     for entry in manifest["frames"]:
-        img = square_corners(Image.open(src_dir / entry["file"]))
+        img = square_corners(checked_capture(src_dir / entry["file"]))
         height = round(img.height * GIF_WIDTH / img.width)
         img = img.resize((GIF_WIDTH, height), Image.Resampling.LANCZOS)
         if entry["caption"]:
@@ -178,7 +201,7 @@ def build_store() -> None:
     src_dir = CAPTURE_ROOT / "store"
     STORE_OUT_DIR.mkdir(parents=True, exist_ok=True)
     for shot in manifest["shots"]:
-        img = square_corners(Image.open(src_dir / shot["file"]))
+        img = square_corners(checked_capture(src_dir / shot["file"]))
         img = img.resize(STORE_SIZE, Image.Resampling.LANCZOS)
         out = STORE_OUT_DIR / f"{shot['name']}.png"
         img.save(out, optimize=True)

@@ -48,8 +48,15 @@ const CHROME_APP_NAME = "Google Chrome for Testing";
 // Window geometry in screen points. On a 2x display this captures
 // 1600x1000 px, which demo_assemble.py scales to 1280x800 for the store and
 // to the GIF width.
-const WINDOW_POSITION = { x: 120, y: 100 };
+const WINDOW_POSITION = { x: 120, y: 200 };
 const WINDOW_SIZE = { width: 800, height: 500 };
+// The tab strip is translucent (macOS vibrancy) and would show whatever is
+// behind the window, e.g. a terminal. An opaque second window sits behind it.
+// It reaches this far past the demo window on each side; the top margin is
+// taller than the backdrop's own (equally translucent) tab strip + toolbar,
+// so only its page content is behind the demo window.
+const BACKDROP_MARGIN = { side: 40, top: 140, bottom: 40 };
+const BACKDROP_COLOR = "#d6d6d6";
 // Viewport point on blank page margin, clicked to unfocus the omnibox.
 const PAGE_CLICK_POINT = { x: 20, y: 300 };
 
@@ -183,6 +190,19 @@ async function launch(colorScheme) {
     if (bounds.width !== WINDOW_SIZE.width || bounds.height !== WINDOW_SIZE.height) {
       throw new Error(`window is ${bounds.width}x${bounds.height}, wanted ${WINDOW_SIZE.width}x${WINDOW_SIZE.height} (screen too small?)`);
     }
+    if (bounds.left !== WINDOW_POSITION.x || bounds.top !== WINDOW_POSITION.y) {
+      throw new Error(`window is at ${bounds.left},${bounds.top}, wanted ${WINDOW_POSITION.x},${WINDOW_POSITION.y}`);
+    }
+
+    const backdropBounds = {
+      left: bounds.left - BACKDROP_MARGIN.side,
+      top: bounds.top - BACKDROP_MARGIN.top,
+      width: bounds.width + 2 * BACKDROP_MARGIN.side,
+      height: bounds.height + BACKDROP_MARGIN.top + BACKDROP_MARGIN.bottom,
+    };
+    const backdrop = await browser.newPage({ type: "window", windowBounds: backdropBounds });
+    await backdrop.setContent(`<!doctype html><style>html { background: ${BACKDROP_COLOR}; }</style>`);
+    // The backdrop opened in front; focusChrome raises the demo window again.
     return { browser, extId, worker, page, bounds, close };
   } catch (err) {
     await close();
@@ -229,14 +249,17 @@ async function settle(page) {
 async function focusChrome(env) {
   for (let attempt = 0; attempt < FOCUS_ATTEMPTS; attempt++) {
     activateChrome();
-    const focused = await env.worker.evaluate(async () => {
-      const [win] = await chrome.windows.getAll({ windowTypes: ["normal"] });
+    // The demo window is the one at WINDOW_POSITION (the backdrop is not).
+    const windowId = await env.worker.evaluate(async (pos) => {
+      const all = await chrome.windows.getAll({ windowTypes: ["normal"] });
+      const win = all.find((w) => w.left === pos.x && w.top === pos.y);
+      if (!win) return null;
       await chrome.windows.update(win.id, { focused: true });
-      return (await chrome.windows.get(win.id)).focused;
-    });
-    if (focused) {
+      return (await chrome.windows.get(win.id)).focused ? win.id : null;
+    }, WINDOW_POSITION);
+    if (windowId !== null) {
       await sleep(WINDOW_SETTLE_MS);
-      return;
+      return windowId;
     }
     await sleep(FOCUS_RETRY_MS);
   }
@@ -246,10 +269,10 @@ async function focusChrome(env) {
 // The real toolbar popup, opened by the extension's own action (openPopup
 // refuses an unfocused window).
 async function openToolbarPopup(env) {
-  await focusChrome(env);
+  const windowId = await focusChrome(env);
   const popupUrl = `chrome-extension://${env.extId}${POPUP_PATH}`;
   const waiting = env.browser.waitForTarget((t) => t.url() === popupUrl, { timeout: POPUP_TIMEOUT_MS });
-  await env.worker.evaluate(() => chrome.action.openPopup());
+  await env.worker.evaluate((id) => chrome.action.openPopup({ windowId: id }), windowId);
   const target = await waiting;
   const popup = await target.asPage();
   await waitReady(popup);
