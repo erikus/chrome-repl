@@ -1,15 +1,15 @@
-// README screenshots and Chrome Web Store assets: loads the unpacked extension
-// into Chrome for Testing via puppeteer (same local install as
-// tests/chrome-smoke.mjs), runs a fixed session in popup.html, and captures
+// README popup screenshots and the Chrome Web Store promo tile: loads the
+// unpacked extension into Chrome for Testing via puppeteer (same local install
+// as tests/chrome-smoke.mjs), runs a fixed session in popup.html, and captures
 // each scene.
 //
 //   node scripts/screenshots.mjs readme  # `make screenshots`: docs/screenshots/<scene>-<scheme>.png
-//   node scripts/screenshots.mjs store   # `make store-assets`: docs/store/*.png
+//   node scripts/screenshots.mjs promo   # `make store-assets`: docs/store/promo-tile-440x280.png
 //
-// Each popup state is a named entry in SCENES. Store screenshots (STORE_SHOTS)
-// compose a scene capture onto a captioned 1280x800 page; the promo tile is
-// rendered from the extension icon. Both are plain HTML pages rendered by the
-// same browser, so the output is deterministic for a given Chrome build.
+// Each popup state is a named entry in SCENES. The promo tile is a plain HTML
+// page around the extension icon, rendered by the same browser, so the output
+// is deterministic for a given Chrome build. The store screenshots are real
+// browser-window captures instead (scripts/demo.mjs).
 //
 // Env: SMOKE_HEADFUL=1 shows the browser window.
 
@@ -23,7 +23,7 @@ const SMOKE_DIR = path.join(PROJECT_ROOT, ".cache", "chrome-test");
 const README_OUT_DIR = path.join(PROJECT_ROOT, "docs", "screenshots");
 const STORE_OUT_DIR = path.join(PROJECT_ROOT, "docs", "store");
 const ICON_PATH = path.join(PROJECT_ROOT, "icons", "icon128.png");
-const MODES = ["readme", "store"];
+const MODES = ["readme", "promo"];
 const HEADLESS = process.env.SMOKE_HEADFUL !== "1";
 
 const EXTENSION_ID_TIMEOUT_MS = 10_000;
@@ -67,53 +67,23 @@ const SCENES = [
   },
 ];
 
-// ---- store assets ---------------------------------------------------------------
-// The Web Store wants exact sizes: screenshots 1280x800 (or 640x400), small
-// promo tile 440x280. Rendered at device scale 1 so CSS px == image px.
-const STORE_SCREENSHOT_SIZE = { width: 1280, height: 800 };
+// ---- promo tile -------------------------------------------------------------------
+// The Web Store's small promo tile is exactly 440x280. Rendered at device
+// scale 1 so CSS px == image px.
 const PROMO_TILE_SIZE = { width: 440, height: 280 };
-// The real popup is 400x100 CSS px; it is captured at this device scale and
-// shown 1:1 in the composition, i.e. 2.5x the on-screen size, still crisp.
-const STORE_POPUP_SCALE = 2.5;
-// Palette shared with the icon (scripts/gen_icons.py).
+// Palette from the icon (scripts/gen_icons.py BACKGROUND_RGB, GLYPH_RGB).
 const BRAND = {
   // Solid on purpose: CSS gradients are dithered nondeterministically (+-1 LSB
   // run to run), which would churn the committed PNGs.
-  backdrop: "#1c2128",
-  accent: "#ffd343",
-  text: "#f0f3f6",
-  dim: "#9da7b3",
+  backdrop: "#654ff0",
+  text: "#ffffff",
+  dim: "rgba(255, 255, 255, 0.85)",
 };
-const TOOLBAR_COLORS = {
-  light: { toolbar: "#dee1e6", omnibox: "#ffffff" },
-  dark: { toolbar: "#3c3c3c", omnibox: "#282828" },
-};
+// The icon is a purple tile too; a white plate keeps its notched outline
+// visible on the purple backdrop.
+const PROMO_ICON_PX = 104;
+const PROMO_PLATE_PAD_PX = 10;
 const SANS = `-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif`;
-
-// One store screenshot per entry: a SCENES capture in one color scheme.
-const STORE_SHOTS = [
-  {
-    file: "screenshot-1-session.png",
-    scene: "session",
-    colorScheme: "light",
-    title: "Python, one click away",
-    subtitle: "A real CPython 3.14 console in your toolbar, with math, random and statistics pre-imported.",
-  },
-  {
-    file: "screenshot-2-completion.png",
-    scene: "completion",
-    colorScheme: "dark",
-    title: "Tab completion as you type",
-    subtitle: "Familiar >>> prompts, tracebacks and history. Follows your light or dark theme.",
-  },
-  {
-    file: "screenshot-3-offline.png",
-    scene: "session",
-    colorScheme: "dark",
-    title: "Offline and private",
-    subtitle: "Runs entirely on your device. No network access, no data collected, no access to web pages.",
-  },
-];
 const PROMO_TILE = {
   file: "promo-tile-440x280.png",
   name: "Python REPL",
@@ -128,39 +98,6 @@ function pngDataUrl(buffer) {
   return `data:image/png;base64,${Buffer.from(buffer).toString("base64")}`;
 }
 
-// A captioned page with a mock browser toolbar and the popup hanging from the
-// extension's toolbar icon, as it appears in Chrome.
-function storeScreenshotHtml(shot, popupPng, popupPixels, iconUrl) {
-  const colors = TOOLBAR_COLORS[shot.colorScheme];
-  const { width, height } = STORE_SCREENSHOT_SIZE;
-  return `<!doctype html><html><head><meta charset="utf-8"><style>
-  html, body { margin: 0; width: ${width}px; height: ${height}px; overflow: hidden; }
-  body {
-    background: ${BRAND.backdrop};
-    font-family: ${SANS}; color: ${BRAND.text};
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-  }
-  h1 { margin: 0; font-size: 56px; font-weight: 700; letter-spacing: -0.5px; }
-  h1::after { content: ""; display: block; width: 72px; height: 5px; margin: 22px auto 0;
-    border-radius: 3px; background: ${BRAND.accent}; }
-  p { margin: 24px 0 0; font-size: 24px; color: ${BRAND.dim}; max-width: 980px; text-align: center; }
-  .window { margin-top: 60px; width: ${popupPixels.width + 80}px; }
-  .toolbar { height: 56px; border-radius: 14px; background: ${colors.toolbar};
-    display: flex; align-items: center; padding: 0 16px; gap: 14px; }
-  .omnibox { flex: 1; height: 34px; border-radius: 17px; background: ${colors.omnibox}; }
-  .icon { width: 32px; height: 32px; border-radius: 6px; outline: 3px solid ${BRAND.accent}; outline-offset: 3px; }
-  .popup { display: block; margin: 10px 6px 0 auto; width: ${popupPixels.width}px; height: ${popupPixels.height}px;
-    border-radius: 10px; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 18px 50px rgba(0, 0, 0, 0.45); }
-</style></head><body>
-  <h1>${escapeHtml(shot.title)}</h1>
-  <p>${escapeHtml(shot.subtitle)}</p>
-  <div class="window">
-    <div class="toolbar"><div class="omnibox"></div><img class="icon" src="${iconUrl}" alt=""></div>
-    <img class="popup" src="${pngDataUrl(popupPng)}" alt="">
-  </div>
-</body></html>`;
-}
-
 function promoTileHtml(iconUrl) {
   const { width, height } = PROMO_TILE_SIZE;
   return `<!doctype html><html><head><meta charset="utf-8"><style>
@@ -170,12 +107,13 @@ function promoTileHtml(iconUrl) {
     font-family: ${SANS}; color: ${BRAND.text};
     display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
-  img { width: 112px; height: 112px; border-radius: 20px;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 10px 30px rgba(0, 0, 0, 0.5); }
-  h1 { margin: 22px 0 0; font-size: 36px; font-weight: 700; }
-  p { margin: 8px 0 0; font-size: 17px; color: ${BRAND.accent}; }
+  .plate { padding: ${PROMO_PLATE_PAD_PX}px; border-radius: 22px; background: #ffffff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
+  img { display: block; width: ${PROMO_ICON_PX}px; height: ${PROMO_ICON_PX}px; }
+  h1 { margin: 20px 0 0; font-size: 36px; font-weight: 700; }
+  p { margin: 6px 0 0; font-size: 17px; color: ${BRAND.dim}; }
 </style></head><body>
-  <img src="${iconUrl}" alt="">
+  <div class="plate"><img src="${iconUrl}" alt=""></div>
   <h1>${escapeHtml(PROMO_TILE.name)}</h1>
   <p>${escapeHtml(PROMO_TILE.tagline)}</p>
 </body></html>`;
@@ -244,21 +182,20 @@ async function openPopup(browser, extId, colorScheme, scale) {
 }
 
 // ---- main ---------------------------------------------------------------------------
-// Capture one scene; returns the PNG and its size in image pixels.
+// Capture one scene; returns the PNG.
 async function captureScene(browser, extId, scene, colorScheme, scale) {
   const { page, size } = await openPopup(browser, extId, colorScheme, scale);
   await scene.prepare(page);
   const png = await page.screenshot({ clip: { x: 0, y: 0, ...size } });
   await page.close();
-  const pixels = { width: Math.round(size.width * scale), height: Math.round(size.height * scale) };
-  return { png, pixels };
+  return png;
 }
 
 async function writeReadme(browser, extId) {
   await mkdir(README_OUT_DIR, { recursive: true });
   for (const colorScheme of COLOR_SCHEMES) {
     for (const scene of SCENES) {
-      const { png } = await captureScene(browser, extId, scene, colorScheme, README_SCALE);
+      const png = await captureScene(browser, extId, scene, colorScheme, README_SCALE);
       const file = path.join(README_OUT_DIR, `${scene.name}-${colorScheme}.png`);
       await writeFile(file, png);
       console.log(`wrote ${path.relative(PROJECT_ROOT, file)}`);
@@ -266,16 +203,9 @@ async function writeReadme(browser, extId) {
   }
 }
 
-async function writeStore(browser, extId) {
+async function writePromo(browser) {
   await mkdir(STORE_OUT_DIR, { recursive: true });
   const iconUrl = pngDataUrl(await readFile(ICON_PATH));
-  for (const shot of STORE_SHOTS) {
-    const scene = SCENES.find((s) => s.name === shot.scene);
-    if (!scene) throw new Error(`STORE_SHOTS: unknown scene ${shot.scene}`);
-    const { png, pixels } = await captureScene(browser, extId, scene, shot.colorScheme, STORE_POPUP_SCALE);
-    await renderHtml(browser, storeScreenshotHtml(shot, png, pixels, iconUrl), STORE_SCREENSHOT_SIZE,
-      path.join(STORE_OUT_DIR, shot.file));
-  }
   await renderHtml(browser, promoTileHtml(iconUrl), PROMO_TILE_SIZE, path.join(STORE_OUT_DIR, PROMO_TILE.file));
 }
 
@@ -291,20 +221,20 @@ async function main() {
     args: ["--no-first-run", "--no-default-browser-check"],
   });
   try {
-    const sw = await browser.waitForTarget(
-      (t) => t.type() === "service_worker" && t.url().startsWith("chrome-extension://"),
-      { timeout: EXTENSION_ID_TIMEOUT_MS },
-    );
-    const extId = new URL(sw.url()).host;
-
-    // Session state lives in the offscreen document, so it is shared by every
-    // popup tab opened below.
-    const { page: setup } = await openPopup(browser, extId, COLOR_SCHEMES[0], README_SCALE);
-    for (const line of SESSION_LINES) await submit(setup, line);
-    await setup.close();
-
-    if (modes.includes("readme")) await writeReadme(browser, extId);
-    if (modes.includes("store")) await writeStore(browser, extId);
+    if (modes.includes("readme")) {
+      const sw = await browser.waitForTarget(
+        (t) => t.type() === "service_worker" && t.url().startsWith("chrome-extension://"),
+        { timeout: EXTENSION_ID_TIMEOUT_MS },
+      );
+      const extId = new URL(sw.url()).host;
+      // Session state lives in the offscreen document, so it is shared by
+      // every popup tab opened below.
+      const { page: setup } = await openPopup(browser, extId, COLOR_SCHEMES[0], README_SCALE);
+      for (const line of SESSION_LINES) await submit(setup, line);
+      await setup.close();
+      await writeReadme(browser, extId);
+    }
+    if (modes.includes("promo")) await writePromo(browser);
   } finally {
     await browser.close();
   }

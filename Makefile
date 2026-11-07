@@ -18,7 +18,7 @@ SMOKE_DIR := .cache/chrome-test
 # runtime and placed at the zip root by `make zip`.
 NOTICES := $(VENDOR_DIR)/THIRD_PARTY_NOTICES.txt
 
-.PHONY: vendor icons test zip smoke screenshots store-assets clean-vendor clean-dist
+.PHONY: vendor icons test zip smoke screenshots store-assets demo-gif clean-vendor clean-dist
 
 vendor: $(VENDOR_DIR)/pyodide.mjs
 
@@ -58,10 +58,20 @@ smoke: vendor icons $(SMOKE_DIR)/node_modules/puppeteer/package.json
 screenshots: vendor icons $(SMOKE_DIR)/node_modules/puppeteer/package.json
 	PUPPETEER_CACHE_DIR=$(CURDIR)/$(SMOKE_DIR)/browsers $(NODE) scripts/screenshots.mjs readme
 
-# Chrome Web Store screenshots (1280x800) and promo tile (440x280) in
-# docs/store/ (committed); see docs/store-listing.md.
+# Chrome Web Store screenshots (1280x800, real browser-window captures; macOS
+# only, see demo-gif) and promo tile (440x280, rendered) in docs/store/
+# (committed); see docs/store-listing.md.
 store-assets: vendor icons $(SMOKE_DIR)/node_modules/puppeteer/package.json
-	PUPPETEER_CACHE_DIR=$(CURDIR)/$(SMOKE_DIR)/browsers $(NODE) scripts/screenshots.mjs store
+	PUPPETEER_CACHE_DIR=$(CURDIR)/$(SMOKE_DIR)/browsers $(NODE) scripts/demo.mjs store
+	$(UV) run scripts/demo_assemble.py store
+	PUPPETEER_CACHE_DIR=$(CURDIR)/$(SMOKE_DIR)/browsers $(NODE) scripts/screenshots.mjs promo
+
+# README demo docs/demo.gif (committed): records the real Chrome window with
+# `screencapture`. macOS only; the terminal needs the Screen Recording
+# permission, and the window's screen area must stay unobstructed.
+demo-gif: vendor icons $(SMOKE_DIR)/node_modules/puppeteer/package.json
+	PUPPETEER_CACHE_DIR=$(CURDIR)/$(SMOKE_DIR)/browsers $(NODE) scripts/demo.mjs gif
+	$(UV) run scripts/demo_assemble.py gif
 
 clean-vendor:
 	rm -rf $(VENDOR_DIR)

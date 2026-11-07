@@ -18,10 +18,12 @@ submission checklist. Assets are generated with `make store-assets` into
    runtime changed.
 3. **Store listing tab:** paste the text from [Store listing](#store-listing-tab)
    below, and upload:
-   - Screenshots (1280x800):
+   - Screenshots (1280x800, real Chrome window captures with the popup
+     open; regenerating them needs macOS, see `make demo-gif` in the README):
      [`store/screenshot-1-session.png`](store/screenshot-1-session.png),
-     [`store/screenshot-2-completion.png`](store/screenshot-2-completion.png),
-     [`store/screenshot-3-offline.png`](store/screenshot-3-offline.png)
+     [`store/screenshot-2-completion.png`](store/screenshot-2-completion.png)
+     (dark theme),
+     [`store/screenshot-3-copy.png`](store/screenshot-3-copy.png)
    - Small promo tile (440x280):
      [`store/promo-tile-440x280.png`](store/promo-tile-440x280.png)
    - Store icon (128x128): [`../icons/icon128.png`](../icons/icon128.png)

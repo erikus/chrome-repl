@@ -3,14 +3,7 @@
 A Chrome extension that puts an offline Python 3.14 REPL in your toolbar
 for quick arithmetic without the need to switch tabs or windows.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/session-dark.png">
-  <img src="docs/screenshots/session-light.png" width="400" alt="Popup with a short session: r = 2.5, math.pi * r**2, and statistics.mean of a list, with results">
-</picture>
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/completion-dark.png">
-  <img src="docs/screenshots/completion-light.png" width="400" alt="Completion menu open after typing math.s and Tab, listing sin, sinh, sqrt, sumprod">
-</picture>
+<img src="docs/demo.gif" width="800" alt="Option+Shift+P opens the popup over a web page; typing random.ch and Tab shows choice( and choices(, a second Tab accepts choice(, Enter evaluates random.choice((1,2,3)), and Cmd-C copies the result">
 
 Runs CPython 3.14 compiled to WebAssembly (Pyodide 314.0.7) with `math`,
 `random`, and `statistics` pre-imported:
@@ -36,9 +29,19 @@ make vendor   # Download pinned Pyodide release, verify SHA-256, and write trimm
 make icons    # Generate icons/icon{16,48,128}.png via scripts/gen_icons.py (stdlib only)
 make test     # Run Node test suite against the trimmed bundle
 make zip      # Package runtime files into dist/python-repl-<manifest version>.zip
-make screenshots  # Regenerate the README images in docs/screenshots/ (uses the smoke-test Chrome)
+make screenshots  # Regenerate the light/dark popup-only images in docs/screenshots/ (uses the smoke-test Chrome)
 make store-assets # Regenerate the Chrome Web Store screenshots and promo tile in docs/store/
+make demo-gif     # Re-record docs/demo.gif from the real browser window
 ```
+
+`make demo-gif` and the screenshots from `make store-assets` capture the real
+Chrome for Testing window, toolbar, and popup with `screencapture`, so they
+need macOS, the **Screen Recording** permission for your terminal, and an
+unobstructed screen while they run (don't use the mouse or keyboard). Key
+presses are sent through Puppeteer, and the popup is opened with
+`chrome.action.openPopup()`, so the Accessibility permission isn't needed. The
+key captions in the GIF are added afterwards. The background page is a local
+fixture (`scripts/demo-page.html`).
 
 Chrome Web Store listing text, privacy answers, and the submission checklist
 are in [`docs/store-listing.md`](docs/store-listing.md).

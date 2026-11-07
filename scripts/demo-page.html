@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- Neutral background page for scripts/demo.mjs (served as DEMO_PAGE_URL). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Banana Bread</title>
+  <style>
+    :root { color-scheme: light dark; --fg: #2b2b2b; --bg: #fbfaf7; --dim: #6b6b6b; --rule: #e4e0d8; --accent: #b4632a; }
+    @media (prefers-color-scheme: dark) {
+      :root { --fg: #e6e3dd; --bg: #1f1e1c; --dim: #a19d95; --rule: #3a3833; --accent: #e09a62; }
+    }
+    html { scrollbar-width: none; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+      font: 16px/1.5 Georgia, "Times New Roman", serif; }
+    main { max-width: 680px; margin: 0 auto; padding: 28px 32px; }
+    .kicker { font: 600 12px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--accent); }
+    h1 { margin: 10px 0 4px; font-size: 34px; line-height: 1.15; }
+    .meta { color: var(--dim); font-size: 14px; margin-bottom: 18px; }
+    h2 { font: 600 15px/1 -apple-system, system-ui, sans-serif; margin: 22px 0 8px;
+      padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+    ul, ol { margin: 0; padding-left: 22px; }
+    li { margin: 3px 0; }
+    .qty { font-variant-numeric: tabular-nums; font-weight: 600; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="kicker">Quick breads</div>
+  <h1>Banana Bread</h1>
+  <div class="meta">Makes 1 loaf (8 x 4 in pan) &middot; 12 slices &middot; 15 min prep &middot; 60 min bake at 350&deg;F</div>
+  <h2>Ingredients</h2>
+  <ul>
+    <li><span class="qty">3</span> ripe bananas, mashed (about <span class="qty">1 1/4</span> cups)</li>
+    <li><span class="qty">1/3</span> cup butter, melted</li>
+    <li><span class="qty">3/4</span> cup sugar</li>
+    <li><span class="qty">1</span> egg, beaten</li>
+    <li><span class="qty">1</span> tsp vanilla extract</li>
+    <li><span class="qty">1</span> tsp baking soda and a pinch of salt</li>
+    <li><span class="qty">1 1/2</span> cups all-purpose flour</li>
+  </ul>
+  <h2>Method</h2>
+  <ol>
+    <li>Heat the oven to 350&deg;F and butter the pan.</li>
+    <li>Stir the butter into the bananas, then the sugar, egg and vanilla.</li>
+    <li>Sprinkle over the baking soda and salt; fold in the flour.</li>
+    <li>Bake 55 to 65 minutes, until a skewer comes out clean.</li>
+  </ol>
+</main>
+</body>
+</html>
