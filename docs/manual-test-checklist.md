@@ -37,10 +37,25 @@ Record Chrome version, OS and date at the top of each run.
 - [ ] `Enter` submits: `2**10` → `1024` **(smoke)**.
 - [ ] `Enter` on incomplete input: `for i in range(3):` → `...` prompt;
       `    print(i)` then an empty line prints 0 1 2 and returns to `>>>`.
-- [ ] `Tab` with one match inserts it: `stat` Tab → `statistics`.
+- [ ] `Tab` with one match inserts it: `statis` Tab → `statistics`.
 - [ ] `Tab` with several matches inserts the common prefix: `math.ac` Tab →
-      `math.acos` (candidates `math.acos(`, `math.acosh(`).
-- [ ] `Tab` `Tab` lists candidates in columns: `math.` Tab Tab **(smoke)**.
+      `math.acos` and opens a menu with `acos(` and `acosh(`.
+- [ ] **Completion menu.** `math.` Tab opens a menu just above the input line
+      (at most 4 rows, a dim `1/62` indicator), covering the transcript; the
+      input keeps focus and nothing is added to the transcript. Typing `sq`
+      filters to `sqrt(`; `Enter` inserts `math.sqrt(` and does not submit
+      **(smoke)**.
+- [ ] Menu keys: `↓`/`Tab` and `↑`/`Shift-Tab` move the highlight and wrap,
+      scrolling the list so the highlight stays visible; `→` accepts; `Esc`
+      closes without inserting; clicking a candidate accepts it.
+- [ ] Menu filtering: `Backspace` widens the list (e.g. `math.sq` → `math.s`);
+      typing `(`, a space or an operator inserts it and closes the menu; a
+      prefix with no candidates closes it; `←`/`Home`/`End` or a click in the
+      line closes it.
+- [ ] With the menu open, `Ctrl-C` / `Ctrl-L` / `Ctrl-D` close it and then act
+      as usual; `↑`/`↓` move in the menu, not the history.
+- [ ] Right after opening (banner only), the menu still fits: it shows fewer
+      rows above the line (or below it if there is more room there).
 - [ ] `Tab` on a blank or continuation line indents by 4 spaces.
 - [ ] `↑` / `↓` walk input history; `↓` past the newest restores the draft.
 - [ ] `Ctrl-L` clears the screen; `x` still works; `↑` still has history
@@ -121,10 +136,11 @@ Record Chrome version, OS and date at the top of each run.
       recent ~200 lines remain; scrolling up stops at the oldest kept line.
 - [ ] **History cap.** Submit 60 distinct lines; `↑` reaches back at most 50.
       A few 2000-character lines evict older entries (16 Ki total).
-- [ ] **Completion cap.** `__builtins__.` Tab Tab (or `[].` Tab Tab after
-      defining a class with >100 attributes): at most 100 candidates and a
-      `(list truncated; …)` line; no common prefix is inserted from a
-      truncated list.
+- [ ] **Completion cap.** `__builtins__.` Tab (or `[].` Tab after defining a
+      class with >100 attributes): the menu shows at most 100 candidates
+      (indicator `1/100`); no common prefix is inserted from a truncated list;
+      typing a further letter fetches fresh candidates (names past the first
+      100 appear).
 
 ## Offline / CSP
 
@@ -144,5 +160,6 @@ Record Chrome version, OS and date at the top of each run.
 
 - [ ] Popup is 400×100, monospace, title "Python REPL" on hover of the toolbar
       icon; icons render crisply at 16/48/128 (toolbar, `chrome://extensions`).
-- [ ] Light and dark system themes both readable.
+- [ ] Light and dark system themes both readable, including the completion
+      menu and its highlighted row.
 - [ ] Input is focused on open and the transcript is scrolled to the bottom.

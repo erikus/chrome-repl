@@ -29,6 +29,7 @@ const MAX_EXEC_OUTPUT_CHARS = 16 * 1024; // worker.js OUTPUT_BUDGET_CHARS
 const MAX_ECHO_SLACK_CHARS = 100; // echoed input line around the output
 const PRINT_LOOP_CLOSED_MS = 5000;
 const PRINT_LOOP_BUSY_ITERS = 200_000;
+const MENU_SUBMIT_GRACE_MS = 300;
 
 const require = createRequire(path.join(SMOKE_DIR, "package.json"));
 const puppeteer = require("puppeteer");
@@ -87,6 +88,11 @@ async function openPopup(browser, extId) {
 
 const transcript = (page) => page.$eval("#transcript", (e) => e.textContent);
 const inputValue = (page) => page.$eval("#input", (e) => e.value);
+const menuState = (page) => page.$eval("#menu", (menu) => ({
+  hidden: menu.hidden,
+  rows: [...menu.querySelectorAll(".menu-item")].map((e) => e.textContent),
+  count: document.getElementById("menu-count").textContent,
+}));
 
 async function waitTranscript(page, predicateSource, arg, timeout = STEP_TIMEOUT_MS) {
   await page.waitForFunction(
@@ -183,16 +189,33 @@ async function main() {
       if (!out.includes(">>> 2**10\n1024\n")) throw new Error(JSON.stringify(out));
     });
 
-    await check("math. Tab Tab lists members", async () => {
+    await check("math. Tab opens a menu; typing filters; Enter accepts", async () => {
+      const transcriptBefore = await transcript(popup);
       await page_type(popup, "math.");
       await popup.keyboard.press("Tab");
-      // Wait for the first completion round trip before the second Tab.
-      await new Promise((r) => setTimeout(r, 300));
-      await popup.keyboard.press("Tab");
-      await waitTranscript(popup, "(t) => t.includes('math.sqrt(') && t.includes('math.pi')");
+      await popup.waitForFunction(() => {
+        const menu = document.getElementById("menu");
+        const labels = [...menu.querySelectorAll(".menu-item")].map((e) => e.textContent);
+        return !menu.hidden && labels.length > 1;
+      }, { timeout: STEP_TIMEOUT_MS, polling: "mutation" });
+      const opened = await menuState(popup);
+      if (!/^1\/\d+$/.test(opened.count)) throw new Error(`no position indicator: ${JSON.stringify(opened)}`);
+      await popup.type("#input", "sq");
+      await popup.waitForFunction(() => {
+        const labels = [...document.querySelectorAll("#menu .menu-item")].map((e) => e.textContent);
+        return labels.length === 1 && labels[0] === "sqrt(";
+      }, { timeout: STEP_TIMEOUT_MS, polling: "mutation" });
+      await popup.keyboard.press("Enter");
       const value = await inputValue(popup);
+      const closed = await menuState(popup);
+      // Give a wrongly sent submit time to show up before checking.
+      await new Promise((r) => setTimeout(r, MENU_SUBMIT_GRACE_MS));
+      const transcriptAfter = await transcript(popup);
       await popup.$eval("#input", (e) => { e.value = ""; });
-      return `input after Tab: "${value}"`;
+      if (value !== "math.sqrt(") throw new Error(`input after Enter: ${JSON.stringify(value)}`);
+      if (!closed.hidden) throw new Error("menu still open after Enter");
+      if (transcriptAfter !== transcriptBefore) throw new Error("Enter submitted the line");
+      return `menu ${opened.count} with ${opened.rows.join(" ")}; "sq" -> sqrt(; input "${value}"`;
     });
 
     await check("Ctrl-C interrupts while True: pass, keeps variables", async () => {

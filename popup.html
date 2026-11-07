@@ -8,6 +8,7 @@
 </head>
 <body>
   <div id="scroll">
+    <div id="anchor-spacer" aria-hidden="true"></div>
     <pre id="banner" class="dim"></pre>
     <pre id="transcript"></pre>
     <pre id="notice" class="dim" hidden></pre>
@@ -16,6 +17,10 @@
       <input id="input" type="text" autocomplete="off" autocapitalize="off"
              autocorrect="off" spellcheck="false" aria-label="Python input">
     </div>
+  </div>
+  <div id="menu" role="listbox" aria-label="Completions" hidden>
+    <div id="menu-list"></div>
+    <span id="menu-count" class="dim"></span>
   </div>
   <span id="measure" aria-hidden="true">MMMMMMMMMM</span>
 </body>

@@ -9,6 +9,6 @@
   log when the interrupt byte is written versus when `KeyboardInterrupt` is
   raised. Then consider re-signalling, a longer or adaptive deadline, or a
   confirm-before-restart step.
-- [ ] Autocomplete UX for long candidate lists (e.g. `math.<tab><tab>`):
-  consider a transient, filter-as-you-type listing instead of appending
-  to the transcript.
+- [x] Autocomplete UX for long candidate lists (e.g. `math.<tab><tab>`):
+  replaced the transcript listing with a transient, filter-as-you-type menu
+  above the input line.

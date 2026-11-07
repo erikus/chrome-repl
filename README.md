@@ -6,15 +6,14 @@ real CPython 3.14 compiled to WebAssembly (Pyodide 314.0.7), with `math`,
 technical interviews.
 
 - Looks like the standard `python` prompt: `>>>` / `...`, CPython tracebacks,
-  readline-style Tab completion.
+  Tab completion with a filter-as-you-type menu (as in ptpython/IPython).
 - Variables and the visible transcript survive closing and reopening the popup
   (they live in a hidden offscreen document). They do not survive a browser
   restart.
 - Only the standard library pieces needed for `math`, `random`, `statistics`
   and the console are bundled. No third-party packages, no `micropip`.
 
-Design and limits: [`plan.md`](plan.md). Message protocol:
-[`docs/protocol.md`](docs/protocol.md).
+Message protocol: [`docs/protocol.md`](docs/protocol.md).
 
 ## Build
 
@@ -50,8 +49,12 @@ conflicts with another one. Check or change it at
 | Key | Behavior |
 |---|---|
 | `Enter` | Submit the line. Continues with `...` if the input is incomplete. |
-| `Tab` | Complete. One match: insert it. Several: insert the common prefix; a second `Tab` lists the candidates in columns. On a blank line, indents. |
-| `↑` / `↓` | Move through input history. |
+| `Tab` | Complete. One match: insert it. Several: insert the common prefix and open a completion menu above the line. On a blank line, indents. |
+| Typing with the menu open | Filters the menu by prefix; `Backspace` widens it again. A non-identifier character (`(`, space, an operator) is inserted and closes the menu. |
+| `↓` / `Tab`, `↑` / `Shift-Tab` (menu open) | Select the next / previous candidate (wraps). |
+| `Enter` / `→` (menu open) | Insert the selected candidate and close the menu. Does not submit the line. A mouse click on a candidate does the same. |
+| `Esc` (menu open) | Close the menu without inserting. |
+| `↑` / `↓` | Move through input history (when the menu is closed). |
 | `Ctrl-L` | Clear the screen. Variables and history are kept. |
 | `Ctrl-D` on an empty line, `exit()`, `quit()` | Reset: restart the interpreter, clear the transcript and the history. |
 | `Ctrl-C` while idle | Discard the current line and pending multi-line source (`KeyboardInterrupt`). |
@@ -79,8 +82,8 @@ make smoke
 ```
 
 Loads the unpacked extension into Chrome for Testing via puppeteer and drives
-`popup.html` as a tab: startup snapshot and banner, evaluation, Tab Tab
-listing, Ctrl-C interrupt (and `crossOriginIsolated` in the offscreen
+`popup.html` as a tab: startup snapshot and banner, evaluation, the Tab
+completion menu (filtering, Enter accepts without submitting), Ctrl-C interrupt (and `crossOriginIsolated` in the offscreen
 document), persistence across close/reopen, warm-open time, CSP-blocked fetch,
 unavailable imports, output caps, Ctrl-L and `exit()`.
 

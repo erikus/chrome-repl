@@ -1,8 +1,7 @@
-# Message protocol (contract between phases)
+# Message protocol
 
 This is the fixed interface between `background.js`, `offscreen.js` and
-`popup.js`. `plan.md` is the overall spec; this file pins down names and shapes
-so the popup and the offscreen/background code can be built independently.
+`popup.js`: message names and shapes.
 The offscreen ↔ worker protocol is private to `offscreen.js`/`worker.js`.
 
 ## Shared constants (`protocol.js`, ES module, imported by all three)
@@ -66,7 +65,9 @@ assume exactly the exports above exist.
   — full replacement strings for the text being completed (the `rlcompleter`
   results for the line up to the cursor, e.g. `"math.sqrt("`), capped at 100
   candidates / 8 Ki chars. If `truncated`, the popup must not insert a common
-  prefix.
+  prefix, and it requests fresh candidates instead of filtering the cached
+  list once the line up to the cursor changes. The popup's completion menu is
+  transient UI and never enters the transcript.
 
 ### Popup → offscreen
 
@@ -75,10 +76,14 @@ assume exactly the exports above exist.
   the transcript as `input`, appends non-empty lines to history, and runs it.
   Accepted submissions run even if the popup disconnects.
 - `{type: "complete", requestId, source}` — `source` is the input line text
-  up to the cursor.
-- `{type: "listing", text}` — the popup's column-formatted completion listing
-  (second Tab), already including the echoed `prompt + line` before it.
-  Offscreen appends it to the transcript as `info`, applying transcript caps.
+  up to the cursor. The popup may send a new request before the previous
+  result arrives (its completion menu refreshing while the user types); it
+  uses only the result for its latest `requestId`.
+- `{type: "listing", text}` — **Deprecated; the current popup no longer sends
+  it** (completions are shown in a transient menu instead). Older popups sent
+  their column-formatted completion listing (second Tab), already including
+  the echoed `prompt + line` before it. Offscreen still appends it to the
+  transcript as `info`, applying transcript caps.
 - `{type: "interrupt", line}` — Ctrl-C. If running: interrupt execution
   (SharedArrayBuffer interrupt, else terminate-and-restart fallback). If idle:
   echo `prompt + line + "^C"`, discard pending multi-line source, print

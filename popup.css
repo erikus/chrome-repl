@@ -13,6 +13,10 @@
   --dim: #8a8a8a;
   --stderr: #b3261e;
   --selection: #b4d5fe;
+  --menu-bg: #f3f3f3;
+  --menu-border: #c8c8c8;
+  --menu-selected-bg: #0060c0;
+  --menu-selected-fg: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,6 +26,10 @@
     --dim: #7f7f7f;
     --stderr: #f48771;
     --selection: #264f78;
+    --menu-bg: #2d2d2d;
+    --menu-border: #4a4a4a;
+    --menu-selected-bg: #094771;
+    --menu-selected-fg: #ffffff;
   }
 }
 
@@ -51,6 +59,19 @@ html, body {
   overflow-y: auto;
   overflow-x: hidden;
   cursor: text;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Bottom-anchored mode: the spacer absorbs free space so the input line sits
+   on the last row (a margin/flex spacer, not justify-content: flex-end, which
+   makes overflowing content unscrollable at the top). */
+#anchor-spacer {
+  flex: 0 0 0;
+}
+
+#scroll.anchored-bottom #anchor-spacer {
+  flex: 1 0 0;
 }
 
 pre {
@@ -95,6 +116,55 @@ pre {
   color: inherit;
   font: inherit;
   line-height: inherit;
+}
+
+/* Completion menu: transient overlay above (or below) the input line.
+   popup.js sets left/top and the list width. Keep the 1px border in sync
+   with MENU_CHROME_PX in popup.js. */
+#menu {
+  position: fixed;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  max-width: calc(var(--popup-width) - 2px);
+  box-sizing: border-box;
+  border: 1px solid var(--menu-border);
+  background: var(--menu-bg);
+  color: var(--fg);
+  cursor: default;
+  user-select: none;
+}
+
+#menu[hidden] {
+  display: none;
+}
+
+#menu-list {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.menu-item {
+  padding: 0 1ch;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: content-box;
+}
+
+.menu-item.selected {
+  background: var(--menu-selected-bg);
+  color: var(--menu-selected-fg);
+}
+
+#menu-count {
+  flex: none;
+  padding-right: 1ch;
+  white-space: pre;
+}
+
+#menu-count:empty {
+  display: none;
 }
 
 #measure {
