@@ -19,6 +19,9 @@ const EXTENSION_ID_TIMEOUT_MS = 10_000;
 const READY_TIMEOUT_MS = 30_000; // cold start includes Pyodide init
 const STEP_TIMEOUT_MS = 10_000;
 const LOOP_RUN_BEFORE_INTERRUPT_MS = 500;
+const REPEAT_INTERRUPTS = 20;
+const REPEAT_INTERRUPT_DELAY_STEP_MS = 37; // spreads run times over 0..max
+const REPEAT_INTERRUPT_MAX_DELAY_MS = 200;
 const WARM_OPEN_SAMPLES = 5;
 const WARM_OPEN_TARGET_MS = 100;
 const EXTERNAL_URL = "https://example.com/";
@@ -253,15 +256,7 @@ async function main() {
 
     await check("Ctrl-C interrupts while True: pass, keeps variables", async () => {
       await submit(popup, "x = 42");
-      await page_type(popup, "while True: pass");
-      await popup.keyboard.press("Enter");
-      await popup.waitForFunction(() => document.getElementById("prompt").textContent === "... ", {
-        timeout: STEP_TIMEOUT_MS,
-      });
-      await popup.keyboard.press("Enter");
-      await popup.waitForFunction(() => document.getElementById("prompt").textContent === "", {
-        timeout: STEP_TIMEOUT_MS,
-      });
+      await startLoop(popup, "while True: pass");
       await new Promise((r) => setTimeout(r, LOOP_RUN_BEFORE_INTERRUPT_MS));
       const tInt = performance.now();
       await ctrl(popup, "KeyC");
@@ -272,6 +267,35 @@ async function main() {
       const out = await submit(popup, "x");
       if (!out.endsWith("42\n")) throw new Error(`x after interrupt: ${JSON.stringify(out)}`);
       return `KeyboardInterrupt after ${intMs.toFixed(0)} ms via SAB; x == 42`;
+    });
+
+    // Regression: Pyodide's read-then-clear of the interrupt byte used to drop
+    // about 1 in 10 Ctrl-Cs (interrupt-buffer.js). Vary the run time so the
+    // signal lands at different points of Pyodide's poll.
+    await check(`Ctrl-C x${REPEAT_INTERRUPTS} never falls back to a restart`, async () => {
+      const latencies = [];
+      for (let i = 0; i < REPEAT_INTERRUPTS; i += 1) {
+        // A unique line per round, so its own KeyboardInterrupt can be found
+        // after the echo even as the capped transcript evicts old rounds.
+        const line = `while True: pass  # ${i}`;
+        await startLoop(popup, line);
+        const runMs = (i * REPEAT_INTERRUPT_DELAY_STEP_MS) % REPEAT_INTERRUPT_MAX_DELAY_MS;
+        await new Promise((r) => setTimeout(r, runMs));
+        const tInt = performance.now();
+        await ctrl(popup, "KeyC");
+        // A restart replaces the transcript with its notice.
+        await waitTranscript(popup, `(t, echo) => t.includes("was restarted") ||
+          (t.lastIndexOf(echo) !== -1 && t.slice(t.lastIndexOf(echo)).includes("KeyboardInterrupt"))`, `>>> ${line}\n`);
+        latencies.push(performance.now() - tInt);
+        const t = await transcript(popup);
+        if (t.includes("was restarted")) throw new Error(`restart on interrupt ${i + 1} (after ${runMs} ms of running)`);
+        await popup.waitForFunction(() => document.getElementById("prompt").textContent === ">>> ", {
+          timeout: STEP_TIMEOUT_MS, polling: "mutation",
+        });
+      }
+      const out = await submit(popup, "x");
+      if (!out.endsWith("42\n")) throw new Error(`x after interrupts: ${JSON.stringify(out)}`);
+      return `max ${Math.max(...latencies).toFixed(0)} ms; x == 42`;
     });
 
     await check("close/reopen keeps variables and transcript", async () => {
@@ -410,6 +434,20 @@ async function main() {
   const failed = results.filter((r) => !r.ok);
   console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
   process.exitCode = failed.length === 0 ? 0 : 1;
+}
+
+// Submit a one-line loop plus the blank line that ends the block, and wait
+// until it is running.
+async function startLoop(page, line) {
+  await page_type(page, line);
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(() => document.getElementById("prompt").textContent === "... ", {
+    timeout: STEP_TIMEOUT_MS,
+  });
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(() => document.getElementById("prompt").textContent === "", {
+    timeout: STEP_TIMEOUT_MS,
+  });
 }
 
 async function page_type(page, text) {

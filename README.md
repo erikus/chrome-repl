@@ -93,7 +93,8 @@ then drives `popup.html` as a tab to verify:
 - Startup snapshot, banner, and basic evaluation
 - Tab completion menu (live filtering and accepting with `Enter` without
   submitting)
-- `Ctrl-C` interrupts and `crossOriginIsolated` state in the offscreen document
+- `Ctrl-C` interrupts (one, then 20 in a row with no restart fallback) and
+  `crossOriginIsolated` state in the offscreen document
 - State persistence across popup close/reopen and warm-open latency
 - CSP-blocked network fetches, disallowed imports, output size caps, `Ctrl-L`,
   and `exit()`

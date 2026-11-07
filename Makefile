@@ -12,7 +12,7 @@ VERSION := $(shell $(NODE) -p 'require("./manifest.json").version')
 ZIP := $(DIST_DIR)/python-repl-$(VERSION).zip
 # Everything the extension loads at runtime. vendor/pyodide is added whole.
 RUNTIME_FILES := manifest.json protocol.js background.js offscreen.html offscreen.js \
-	worker.js popup.html popup.js popup-lib.js popup.css
+	worker.js interrupt-buffer.js popup.html popup.js popup-lib.js popup.css
 SMOKE_DIR := .cache/chrome-test
 
 .PHONY: vendor icons test zip smoke clean-vendor clean-dist

@@ -18,6 +18,7 @@
 //   {type: "fatal", message}          interpreter unusable; session must restart
 
 import { loadPyodide } from "./vendor/pyodide/pyodide.mjs";
+import { atomicInterruptBuffer } from "./interrupt-buffer.js";
 
 const PYODIDE_INDEX_URL = new URL("./vendor/pyodide/", import.meta.url).href;
 const PRELOADED_MODULES = ["math", "random", "statistics"];
@@ -253,7 +254,9 @@ async function init(message) {
     stderr: (s) => console.warn("[py]", s),
   });
   const tLoaded = performance.now();
-  if (message.interruptBuffer) pyodide.setInterruptBuffer(message.interruptBuffer);
+  // Never hand Pyodide the raw view: its read-then-clear can drop a Ctrl-C
+  // (see interrupt-buffer.js).
+  if (message.interruptBuffer) pyodide.setInterruptBuffer(atomicInterruptBuffer(message.interruptBuffer));
   pyodide.globals.set("_repl_emit", emit);
   pyodide.runPython(PY_SETUP, { filename: PY_SETUP_FILENAME });
   const tSetup = performance.now();

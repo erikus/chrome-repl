@@ -1,14 +1,8 @@
 # TODO
 
-- [ ] **Ctrl-C sometimes misses the 1 s interrupt deadline.** In about 1 of 6
-  `make smoke` runs, `while True: pass` + Ctrl-C did not stop within
-  `offscreen.js`'s 1 s interrupt timeout. The SharedArrayBuffer path normally
-  stops it in 2–3 ms. The fallback then restarts the worker, and the user
-  loses their variables. Seen once, while a visible Chrome for Testing window
-  was also running (machine under load?). Next steps: reproduce in a loop and
-  log when the interrupt byte is written versus when `KeyboardInterrupt` is
-  raised. Then consider re-signalling, a longer or adaptive deadline, or a
-  confirm-before-restart step.
+- [x] **Ctrl-C sometimes misses the 1 s interrupt deadline.** Fixed: Pyodide's
+  non-atomic read-then-clear of the interrupt byte dropped ~1 in 10 Ctrl-Cs
+  (not load); `interrupt-buffer.js` clears it with a compare-and-swap instead.
 - [ ] **README screenshots.** Add a screenshot or short GIF of the popup near
   the top of the README (a prompt with a result, plus the completion menu
   open). Add a `make screenshots` rule that reuses the smoke-test Puppeteer
