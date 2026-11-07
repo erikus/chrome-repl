@@ -15,7 +15,7 @@ RUNTIME_FILES := manifest.json protocol.js background.js offscreen.html offscree
 	worker.js interrupt-buffer.js popup.html popup.js popup-lib.js popup.css
 SMOKE_DIR := .cache/chrome-test
 
-.PHONY: vendor icons test zip smoke clean-vendor clean-dist
+.PHONY: vendor icons test zip smoke screenshots clean-vendor clean-dist
 
 vendor: $(VENDOR_DIR)/pyodide.mjs
 
@@ -49,6 +49,10 @@ $(SMOKE_DIR)/node_modules/puppeteer/package.json: tests/chrome-smoke.package.jso
 
 smoke: vendor icons $(SMOKE_DIR)/node_modules/puppeteer/package.json
 	PUPPETEER_CACHE_DIR=$(CURDIR)/$(SMOKE_DIR)/browsers $(NODE) tests/chrome-smoke.mjs
+
+# README images in docs/screenshots/ (committed), from the same puppeteer setup.
+screenshots: vendor icons $(SMOKE_DIR)/node_modules/puppeteer/package.json
+	PUPPETEER_CACHE_DIR=$(CURDIR)/$(SMOKE_DIR)/browsers $(NODE) scripts/screenshots.mjs
 
 clean-vendor:
 	rm -rf $(VENDOR_DIR)

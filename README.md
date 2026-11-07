@@ -3,6 +3,15 @@
 A Chrome extension that puts an offline Python 3.14 REPL in your toolbar
 for quick arithmetic without the need to switch tabs or windows.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/session-dark.png">
+  <img src="docs/screenshots/session-light.png" width="400" alt="Popup with a short session: r = 2.5, math.pi * r**2, and statistics.mean of a list, with results">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/completion-dark.png">
+  <img src="docs/screenshots/completion-light.png" width="400" alt="Completion menu open after typing math.s and Tab, listing sin, sinh, sqrt, sumprod">
+</picture>
+
 Runs CPython 3.14 compiled to WebAssembly (Pyodide 314.0.7) with `math`,
 `random`, and `statistics` pre-imported:
 
@@ -27,6 +36,7 @@ make vendor   # Download pinned Pyodide release, verify SHA-256, and write trimm
 make icons    # Generate icons/icon{16,48,128}.png via scripts/gen_icons.py (stdlib only)
 make test     # Run Node test suite against the trimmed bundle
 make zip      # Package runtime files into dist/python-repl-<manifest version>.zip
+make screenshots  # Regenerate the README images in docs/screenshots/ (uses the smoke-test Chrome)
 ```
 
 `vendor/`, `dist/`, and `.cache/` are generated at build time and gitignored.
