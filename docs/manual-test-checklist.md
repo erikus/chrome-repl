@@ -45,8 +45,8 @@ Record Chrome version, OS and date at the top of each run.
       input keeps focus and nothing is added to the transcript. Typing `sq`
       filters to `sqrt(`; `Enter` inserts `math.sqrt(` and does not submit
       **(smoke)**.
-- [ ] Menu keys: `↓`/`Tab` and `↑`/`Shift-Tab` move the highlight and wrap,
-      scrolling the list so the highlight stays visible; `→` accepts; `Esc`
+- [ ] Menu keys: `↓` and `↑` move the highlight and wrap, scrolling the
+      list so the highlight stays visible; `Tab` and `→` accept; `Esc`
       closes without inserting; clicking a candidate accepts it.
 - [ ] Menu filtering: `Backspace` widens the list (e.g. `math.sq` → `math.s`);
       typing `(`, a space or an operator inserts it and closes the menu; a

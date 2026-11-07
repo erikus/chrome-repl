@@ -51,8 +51,8 @@ conflicts with another one. Check or change it at
 | `Enter` | Submit the line. Continues with `...` if the input is incomplete. |
 | `Tab` | Complete. One match: insert it. Several: insert the common prefix and open a completion menu above the line. On a blank line, indents. |
 | Typing with the menu open | Filters the menu by prefix; `Backspace` widens it again. A non-identifier character (`(`, space, an operator) is inserted and closes the menu. |
-| `↓` / `Tab`, `↑` / `Shift-Tab` (menu open) | Select the next / previous candidate (wraps). |
-| `Enter` / `→` (menu open) | Insert the selected candidate and close the menu. Does not submit the line. A mouse click on a candidate does the same. |
+| `↓` / `↑` (menu open) | Select the next / previous candidate (wraps). |
+| `Tab` / `Enter` / `→` (menu open) | Insert the selected candidate and close the menu. Does not submit the line. A mouse click on a candidate does the same. |
 | `Esc` (menu open) | Close the menu without inserting. |
 | `↑` / `↓` | Move through input history (when the menu is closed). |
 | `Ctrl-L` | Clear the screen. Variables and history are kept. |

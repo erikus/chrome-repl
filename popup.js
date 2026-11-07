@@ -775,8 +775,10 @@ function onMenuKeyDown(e) {
   }
   switch (e.key) {
     case "Tab":
+      // Tab accepts (editor/DevTools style); Shift-Tab is swallowed so focus
+      // stays in the input.
       e.preventDefault();
-      moveMenuSelection(e.shiftKey ? -1 : 1);
+      if (!e.shiftKey) acceptMenuItem();
       return true;
     case "ArrowDown":
       e.preventDefault();

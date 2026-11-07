@@ -235,6 +235,22 @@ async function main() {
       return `menu ${opened.count} with ${opened.rows.join(" ")}; "sq" -> sqrt(; input "${value}"`;
     });
 
+    await check("Tab with the menu open accepts the highlighted candidate", async () => {
+      await page_type(popup, "math.ac");
+      await popup.keyboard.press("Tab");
+      await popup.waitForFunction(() => !document.getElementById("menu").hidden,
+        { timeout: STEP_TIMEOUT_MS, polling: "mutation" });
+      const opened = await menuState(popup);
+      await popup.keyboard.press("ArrowDown");
+      await popup.keyboard.press("Tab");
+      const value = await inputValue(popup);
+      const closed = await menuState(popup);
+      await popup.$eval("#input", (e) => { e.value = ""; });
+      if (value !== "math.acosh(") throw new Error(`input after ↓ Tab: ${JSON.stringify(value)}`);
+      if (!closed.hidden) throw new Error("menu still open after Tab");
+      return `menu ${opened.rows.join(" ")}; ↓ Tab -> "${value}"`;
+    });
+
     await check("Ctrl-C interrupts while True: pass, keeps variables", async () => {
       await submit(popup, "x = 42");
       await page_type(popup, "while True: pass");
