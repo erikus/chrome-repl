@@ -1,127 +1,144 @@
-# Python REPL (Chrome extension)
+# Python REPL (Chrome Extension)
 
-A toolbar button that opens a small popup running a plain, offline Python REPL:
-real CPython 3.14 compiled to WebAssembly (Pyodide 314.0.7), with `math`,
-`random` and `statistics` pre-imported. Meant for quick arithmetic, e.g. during
-technical interviews.
+A Chrome extension that puts an offline Python 3.14 REPL in your toolbar
+for quick arithmetic without the need to switch tabs or windows.
 
-- Looks like the standard `python` prompt: `>>>` / `...`, CPython tracebacks,
-  Tab completion with a filter-as-you-type menu (as in ptpython/IPython).
-- Variables and the visible transcript survive closing and reopening the popup
-  (they live in a hidden offscreen document). They do not survive a browser
-  restart.
-- Only the standard library pieces needed for `math`, `random`, `statistics`
-  and the console are bundled. No third-party packages, no `micropip`.
+Runs CPython 3.14 compiled to WebAssembly (Pyodide 314.0.7) with `math`,
+`random`, and `statistics` pre-imported:
 
-Message protocol: [`docs/protocol.md`](docs/protocol.md).
+- **Familiar console UX:** Standard `>>>` / `...` prompts, CPython tracebacks,
+  and Tab completion with a live-filtering popup menu (similar to IPython).
+- **Persistent across popups:** Variables and scrollback live in a hidden
+  offscreen document, so closing and reopening the popup picks up right where
+  you left off. State resets when the browser restarts.
+- **Minimal footprint:** Bundles only the standard library modules required for
+  the console and the three pre-imported modules. No third-party packages and no
+  `micropip`.
+- Instant, responsive UI.
+
+See [`docs/protocol.md`](docs/protocol.md) for the internal message protocol.
 
 ## Build
 
 Requires [`uv`](https://docs.astral.sh/uv/) and Node.js (for `make test`).
 
 ```sh
-make vendor   # download the pinned Pyodide release, verify its SHA-256, write a trimmed copy to vendor/pyodide/
-make icons    # generate icons/icon{16,48,128}.png (scripts/gen_icons.py, stdlib only)
-make test     # Node tests against the trimmed bundle
-make zip      # dist/python-repl-<manifest version>.zip with only the runtime files
+make vendor   # Download pinned Pyodide release, verify SHA-256, and write trimmed bundle to vendor/pyodide/
+make icons    # Generate icons/icon{16,48,128}.png via scripts/gen_icons.py (stdlib only)
+make test     # Run Node test suite against the trimmed bundle
+make zip      # Package runtime files into dist/python-repl-<manifest version>.zip
 ```
 
-`vendor/`, `dist/` and `.cache/` are generated and gitignored.
+`vendor/`, `dist/`, and `.cache/` are generated at build time and gitignored.
 
-## Install (load unpacked)
+## Install (Unpacked)
 
-1. `make vendor icons`
-2. Open `chrome://extensions` and turn on **Developer mode** (top right).
-3. Click **Load unpacked** and select this directory (the one containing
+1. Run `make vendor icons`.
+2. Open `chrome://extensions` and enable **Developer mode** (top right).
+3. Click **Load unpacked** and select the repository root (containing
    `manifest.json`).
-4. Pin **Python REPL** from the puzzle-piece menu and click it.
+4. Pin **Python REPL** from the toolbar's puzzle-piece menu and click it to
+   open.
 
-After editing source files, click the reload icon on the extension's card.
-Chrome 116 or later is required.
+After modifying source files, click the reload icon on the extension card in
+`chrome://extensions`. Requires Chrome 116 or later.
 
 **Hotkey:** `Alt+Shift+P` (`Option+Shift+P` on macOS) opens the popup. Chrome
-applies a suggested shortcut only on a fresh install, and skips it if it
-conflicts with another one. Check or change it at
+only binds suggested shortcuts on fresh installs and skips them if there is a
+conflict. You can view or customize the binding at
 `chrome://extensions/shortcuts`.
 
-## Keys
+## Keyboard Shortcuts
+
+On macOS, `Ctrl` shortcuts use the `Control` key (not `Command`), except where
+noted.
 
 | Key | Behavior |
 |---|---|
-| `Enter` | Submit the line. Continues with `...` if the input is incomplete. |
-| `Tab` | Complete. One match: insert it. Several: insert the common prefix and open a completion menu above the line. On a blank line, indents. |
-| Typing with the menu open | Filters the menu by prefix; `Backspace` widens it again. A non-identifier character (`(`, space, an operator) is inserted and closes the menu. |
-| `↓` / `↑` (menu open) | Select the next / previous candidate (wraps). |
-| `Tab` / `Enter` / `→` (menu open) | Insert the selected candidate and close the menu. Does not submit the line. A mouse click on a candidate does the same. |
-| `Esc` (menu open) | Close the menu without inserting. |
-| `↑` / `↓` | Move through input history (when the menu is closed). |
-| `Ctrl-L` | Clear the screen. Variables and history are kept. |
-| `Cmd-C` (macOS) / `Ctrl-Shift-C` with nothing selected | Copy the last output (as shown, e.g. strings keep their quotes). With a selection, copies the selection as usual. |
-| `Ctrl-D` on an empty line, `exit()`, `quit()` | Reset: restart the interpreter, clear the transcript and the history. |
-| `Ctrl-C` while idle | Discard the current line and pending multi-line source (`KeyboardInterrupt`). |
-| `Ctrl-C` while running | Interrupt the running code with `KeyboardInterrupt`; variables are kept. If Python does not stop within 1 s (e.g. inside a long C call) it is restarted and the session is lost. |
-
-On macOS these are the Control key, not Command.
+| `Enter` | Submit the current line, or continue with `...` if the statement is incomplete. |
+| `Tab` | Complete identifier. Inserts immediately on a single match; inserts the common prefix and opens the completion menu on multiple matches. Indents when pressed on a blank line. |
+| Typing (menu open) | Filters completions by prefix; `Backspace` widens the filter. Typing a non-identifier character (`(`, space, operator) inserts it and closes the menu. |
+| `↓` / `↑` (menu open) | Cycle through completion candidates (wraps around). |
+| `Tab` / `Enter` / `→` (menu open) | Insert the selected candidate and close the menu without submitting the line. Clicking a candidate with the mouse does the same. |
+| `Esc` (menu open) | Dismiss the completion menu without inserting. |
+| `↑` / `↓` | Navigate input history (when the completion menu is closed). |
+| `Ctrl-L` | Clear the screen while preserving variables and history. |
+| `Cmd-C` (macOS) / `Ctrl-Shift-C` | Copy the selected text, or copy the last output verbatim (including quotes on strings) if nothing is selected. |
+| `Ctrl-D` (empty line), `exit()`, `quit()` | Reset the session: restart the interpreter and clear both the transcript and history. |
+| `Ctrl-C` (idle) | Discard the current input line and any pending multi-line block (`KeyboardInterrupt`). |
+| `Ctrl-C` (running) | Raise `KeyboardInterrupt` in running code while keeping defined variables. If execution does not halt within 1 second (e.g., inside a blocking C call), the worker restarts and session state is cleared. |
 
 ## Privacy
 
-- **No network.** Pyodide and the trimmed standard library are bundled; nothing
-  is fetched from a CDN, and package loading (`loadPackage`, `micropip`) is
-  never used. The extension's Content Security Policy limits `connect-src` to
-  the extension itself, so even Python code calling `js.fetch` cannot reach
-  the internet (verified by the smoke test below).
-- **No permissions beyond `offscreen`.** No host permissions, no content
-  scripts, no tabs/history/cookies access: the extension never sees web pages.
-- **No storage.** Nothing is written to `chrome.storage`, disk, or anywhere
-  else. The session lives in memory and is gone after a reset or a browser
-  restart.
+- **Zero network access:** Pyodide and the trimmed standard library are bundled
+  locally—nothing is fetched from a CDN, and dynamic package loading
+  (`loadPackage`, `micropip`) is disabled. The Content Security Policy restricts
+  `connect-src` to the extension origin, blocking even direct `js.fetch` calls
+  from Python (verified by the smoke test).
+- **Minimal permissions:** Requests only the `offscreen` permission. With no
+  host permissions, content scripts, or access to tabs, history, or cookies, the
+  extension cannot read or interact with web pages.
+- **Ephemeral state:** Nothing is written to `chrome.storage` or disk. Session
+  state lives strictly in memory and disappears on reset or browser restart.
 
-## Chrome smoke test
+## Chrome Smoke Test
 
 ```sh
 make smoke
 ```
 
-Loads the unpacked extension into Chrome for Testing via puppeteer and drives
-`popup.html` as a tab: startup snapshot and banner, evaluation, the Tab
-completion menu (filtering, Enter accepts without submitting), Ctrl-C interrupt (and `crossOriginIsolated` in the offscreen
-document), persistence across close/reopen, warm-open time, CSP-blocked fetch,
-unavailable imports, output caps, Ctrl-L and `exit()`.
+Launches Chrome for Testing via Puppeteer with the unpacked extension loaded,
+then drives `popup.html` as a tab to verify:
 
-puppeteer and its Chrome for Testing download (~600 MB) are installed locally
-in `.cache/chrome-test/` from `tests/chrome-smoke.package.json`; nothing is
-installed globally. Branded Google Chrome ignores `--load-extension`, which is
-why Chrome for Testing is used. `SMOKE_HEADFUL=1 make smoke` shows the window.
-It cannot press the real toolbar button or measure click-to-popup time; see
-[`docs/manual-test-checklist.md`](docs/manual-test-checklist.md) for what
-still needs a human.
+- Startup snapshot, banner, and basic evaluation
+- Tab completion menu (live filtering and accepting with `Enter` without
+  submitting)
+- `Ctrl-C` interrupts and `crossOriginIsolated` state in the offscreen document
+- State persistence across popup close/reopen and warm-open latency
+- CSP-blocked network fetches, disallowed imports, output size caps, `Ctrl-L`,
+  and `exit()`
 
-## Bumping Pyodide
+Puppeteer and Chrome for Testing (~600 MB) are installed locally into
+`.cache/chrome-test/` from `tests/chrome-smoke.package.json`—nothing is
+installed globally. Chrome for Testing is required because branded Google Chrome
+disables `--load-extension`. Run `SMOKE_HEADFUL=1 make smoke` to watch the
+browser window.
 
-1. In `scripts/fetch_pyodide.py`, update `PYODIDE_VERSION` and
-   `TARBALL_SHA256` (the SHA-256 of `pyodide-core-<version>.tar.bz2` from the
-   GitHub release).
-2. Fetch the **untrimmed** stdlib and record what the console actually loads:
+Because automated tests cannot click the browser toolbar button or measure real
+click-to-popup latency, see
+[`docs/manual-test-checklist.md`](docs/manual-test-checklist.md) for manual
+verification steps.
+
+## Upgrading Pyodide
+
+1. Update `PYODIDE_VERSION` and `TARBALL_SHA256` (the SHA-256 of
+   `pyodide-core-<version>.tar.bz2` from the Pyodide GitHub release) in
+   `scripts/fetch_pyodide.py`.
+2. Fetch the **untrimmed** standard library and trace which modules the console
+   loads:
    ```sh
    make clean-vendor
    uv run scripts/fetch_pyodide.py --untrimmed
    PYODIDE_TRACE_MODULES=1 node --test tests/
    ```
-   This prints every stdlib file loaded while exercising the console,
-   completion, tracebacks and the three modules.
-3. Add anything new to `STDLIB_ALLOWLIST` in `scripts/fetch_pyodide.py`.
-4. Rebuild trimmed and re-test:
+   This logs every stdlib file imported while exercising the console,
+   completions, tracebacks, and pre-imported modules.
+3. Add any newly required modules to `STDLIB_ALLOWLIST` in
+   `scripts/fetch_pyodide.py`.
+4. Rebuild the trimmed bundle and run the full test suite:
    ```sh
    make clean-vendor vendor test smoke
    ```
 5. If the Python minor version changed, update `BANNER_PREFIX` in
-   `tests/chrome-smoke.mjs` and the version mentioned in this README, and
-   re-read `docs/pyodide-notes.md` against the new release.
+   `tests/chrome-smoke.mjs`, update the version numbers in this README, and
+   review `docs/pyodide-notes.md` against the new release.
 
 ## License
 
-MIT, see `LICENSE`. The built extension (`vendor/pyodide/`, and so
-`make zip`) bundles Pyodide (MPL-2.0) and CPython and its stdlib (PSF
-License) plus the libraries compiled into `pyodide.asm.wasm`. These are
-downloaded at build time, not committed. If you distribute the zip, include
-their license notices.
+MIT (see [`LICENSE`](LICENSE)).
+
+Built artifacts (`vendor/pyodide/` and `dist/*.zip` produced by `make zip`)
+bundle third-party software downloaded at build time and not committed to this
+repository, including Pyodide (MPL-2.0), CPython and its standard library (PSF
+License), and libraries compiled into `pyodide.asm.wasm`. If you distribute the
+packaged zip, include the corresponding upstream license notices.
