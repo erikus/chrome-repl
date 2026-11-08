@@ -5,14 +5,14 @@
   (not load); `interrupt-buffer.js` clears it with a compare-and-swap instead.
 - [x] **README screenshots.** `make screenshots` runs `scripts/screenshots.mjs`
   (a fixed session, scenes in light and dark) into `docs/screenshots/`.
-- [ ] **Publish to the Chrome Web Store.** Today users must install `uv`, build,
-  and load the extension unpacked. The package (with `THIRD_PARTY_NOTICES.txt`),
-  store assets (`make store-assets`), listing text, privacy answers and
-  `PRIVACY.md` are ready; see [`docs/store-listing.md`](docs/store-listing.md).
-  Remaining manual steps: register a developer account (US$5) and verify its
-  email; merge `PRIVACY.md` to `main` so the policy URL resolves; upload the
-  zip and assets and submit for review; once live, add the install link to the
-  README.
+- [ ] **Publish to the Chrome Web Store.** Version 0.1.0 (tag `v0.1.0`) was
+  submitted for review on 2026-11-08 with the three screenshots and the small
+  promo tile from `docs/store/`; see
+  [`docs/store-listing.md`](docs/store-listing.md). While in review: keep
+  `PRIVACY.md` at its path on `main` (the listing links to it), and hold code
+  changes, since uploading a new zip cancels the review and needs a version
+  bump. Once live, add the store install link to the README above
+  "Install (Unpacked)".
 - [x] Autocomplete UX for long candidate lists (e.g. `math.<tab><tab>`):
   replaced the transcript listing with a transient, filter-as-you-type menu
   above the input line.
