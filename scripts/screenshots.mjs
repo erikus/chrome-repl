@@ -34,6 +34,12 @@ const README_SCALE = 2;
 // Before the first layout; replaced by the popup's own size (popup.css).
 const INITIAL_VIEWPORT = { width: 800, height: 600 };
 const COLOR_SCHEMES = ["light", "dark"];
+// Grey frame drawn inside the README images so they don't blend into the page
+// or each other (GitHub strips inline CSS, so it has to be in the image).
+// GitHub's own border greys for each theme.
+const README_BORDER_COLOR = { light: "#d0d7de", dark: "#3d444d" };
+const README_BORDER_CSS_PX = 1;
+const README_BORDER_Z_INDEX = "2147483647"; // above the completion menu
 
 // Submitted once, in order; every scene shows the resulting transcript.
 const SESSION_LINES = [
@@ -182,10 +188,28 @@ async function openPopup(browser, extId, colorScheme, scale) {
 }
 
 // ---- main ---------------------------------------------------------------------------
+// Overlay a border on the viewport edge. Built with CSSOM writes, since the
+// extension CSP blocks injected <style> tags.
+async function addBorder(page, color) {
+  await page.evaluate((color, widthPx, zIndex) => {
+    const frame = document.createElement("div");
+    Object.assign(frame.style, {
+      position: "fixed",
+      inset: "0",
+      border: `${widthPx}px solid ${color}`,
+      boxSizing: "border-box",
+      pointerEvents: "none",
+      zIndex,
+    });
+    document.body.appendChild(frame);
+  }, color, README_BORDER_CSS_PX, README_BORDER_Z_INDEX);
+}
+
 // Capture one scene; returns the PNG.
 async function captureScene(browser, extId, scene, colorScheme, scale) {
   const { page, size } = await openPopup(browser, extId, colorScheme, scale);
   await scene.prepare(page);
+  await addBorder(page, README_BORDER_COLOR[colorScheme]);
   const png = await page.screenshot({ clip: { x: 0, y: 0, ...size } });
   await page.close();
   return png;

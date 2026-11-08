@@ -3,7 +3,7 @@
 A Chrome extension that puts an offline Python 3.14 REPL in your toolbar
 for quick arithmetic without the need to switch tabs or windows.
 
-<img src="docs/demo.gif" width="800" alt="Option+Shift+P opens the popup over a web page; typing random.ch and Tab shows choice( and choices(, a second Tab accepts choice(, Enter evaluates random.choice((1,2,3)), and Cmd-C copies the result">
+<img src="docs/demo.gif" width="482" alt="Option+Shift+P opens the popup over a web page; typing random.ch and Tab shows choice( and choices(, a second Tab accepts choice(, Enter evaluates random.choice((1,2,3)), and Cmd-C copies the result">
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/session-dark.png">

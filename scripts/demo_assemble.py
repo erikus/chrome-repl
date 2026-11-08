@@ -22,7 +22,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont, ImageStat
+from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageStat
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CAPTURE_ROOT = PROJECT_ROOT / ".cache" / "demo"
@@ -46,6 +46,10 @@ GIF_WIDTH = 960
 GIF_COLORS = 256
 GIF_DURATION_UNIT_MS = 10  # GIF delays are stored in centiseconds
 GIF_LOOP_FOREVER = 0
+# Grey frame so the GIF stands apart from the README's other images. The README
+# shows the GIF at half its width, so 2 px here is 1 px on the page.
+GIF_BORDER_PX = 2
+GIF_BORDER_RGB = (0xD0, 0xD7, 0xDE)  # GitHub's light-theme border grey
 
 # Key caption, in GIF pixels.
 CAPTION_FONT_SIZE = 26
@@ -170,12 +174,13 @@ def build_gif() -> None:
         img = img.resize((GIF_WIDTH, height), Image.Resampling.LANCZOS)
         if entry["caption"]:
             img = draw_caption(img, entry["caption"], font)
+        img = ImageOps.expand(img, border=GIF_BORDER_PX, fill=GIF_BORDER_RGB)
         rgb_frames.append(img)
         hold = int(entry["holdMs"])
         durations.append(round(hold / GIF_DURATION_UNIT_MS) * GIF_DURATION_UNIT_MS)
     # One palette for all frames, so colours do not shift from frame to frame.
     # Octree keeps small saturated areas (the toolbar icon) truer than median cut.
-    mosaic = Image.new("RGB", (GIF_WIDTH, sum(f.height for f in rgb_frames)))
+    mosaic = Image.new("RGB", (rgb_frames[0].width, sum(f.height for f in rgb_frames)))
     y = 0
     for f in rgb_frames:
         mosaic.paste(f, (0, y))
