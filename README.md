@@ -5,6 +5,15 @@ for quick arithmetic without the need to switch tabs or windows.
 
 <img src="docs/demo.gif" width="800" alt="Option+Shift+P opens the popup over a web page; typing random.ch and Tab shows choice( and choices(, a second Tab accepts choice(, Enter evaluates random.choice((1,2,3)), and Cmd-C copies the result">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/session-dark.png">
+  <img src="docs/screenshots/session-light.png" width="400" alt="Popup with a short session: r = 2.5, math.pi * r**2, and statistics.mean of a list, with results">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/completion-dark.png">
+  <img src="docs/screenshots/completion-light.png" width="400" alt="Completion menu open after typing math.s and Tab, listing sin, sinh, sqrt, sumprod">
+</picture>
+
 Runs CPython 3.14 compiled to WebAssembly (Pyodide 314.0.7) with `math`,
 `random`, and `statistics` pre-imported:
 
