@@ -3,7 +3,7 @@
 A Chrome extension that puts an offline Python 3.14 REPL in your toolbar
 for quick arithmetic without the need to switch tabs or windows.
 
-<img src="docs/demo.gif" width="482" alt="Option+Shift+P opens the popup over a web page; typing random.ch and Tab shows choice( and choices(, a second Tab accepts choice(, Enter evaluates random.choice((1,2,3)), and Cmd-C copies the result">
+<img src="docs/demo.gif" width="482" alt="Option+Shift+P opens the popup over a web page, showing the Python version banner; typing random.ch and Tab shows choice( and choices(, a second Tab accepts choice(, Enter evaluates random.choice((1,2,3)), and Cmd-C copies the result">
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/session-dark.png">
@@ -41,6 +41,7 @@ make zip      # Package runtime files into dist/python-repl-<manifest version>.z
 make screenshots  # Regenerate the light/dark popup-only images in docs/screenshots/ (uses the smoke-test Chrome)
 make store-assets # Regenerate the Chrome Web Store screenshots and promo tile in docs/store/
 make demo-gif     # Re-record docs/demo.gif from the real browser window
+make demo-video   # Build dist/demo.mp4 (1920x1080, for YouTube) from the last demo-gif recording
 ```
 
 `make demo-gif` and the screenshots from `make store-assets` capture the real
@@ -50,7 +51,9 @@ unobstructed screen while they run (don't use the mouse or keyboard). Key
 presses are sent through Puppeteer, and the popup is opened with
 `chrome.action.openPopup()`, so the Accessibility permission isn't needed. The
 key captions in the GIF are added afterwards. The background page is a local
-fixture (`scripts/demo-page.html`).
+fixture (`scripts/demo-page.html`). The demo starts from a fresh profile, so
+the popup shows the real first-open banner; the video uses the same frames at
+full resolution, padded to 16:9.
 
 Chrome Web Store listing text, privacy answers, and the submission checklist
 are in [`docs/store-listing.md`](docs/store-listing.md).

@@ -1,12 +1,18 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["pillow==12.0.0"]
+# dependencies = ["pillow==12.0.0", "imageio-ffmpeg==0.6.0"]
 # ///
-"""Turn the window captures from scripts/demo.mjs into committed images.
+"""Turn the window captures from scripts/demo.mjs into images and a video.
 
 Usage:
     uv run scripts/demo_assemble.py gif    # .cache/demo/gif/   -> docs/demo.gif
+    uv run scripts/demo_assemble.py video  # .cache/demo/gif/   -> dist/demo.mp4
     uv run scripts/demo_assemble.py store  # .cache/demo/store/ -> docs/store/screenshot-*.png
+
+The video is built from the same recording as the GIF, at full capture
+resolution, centred on a 16:9 canvas in the demo backdrop colour (H.264,
+yuv420p, constant frame rate; for uploading, so it lives in the gitignored
+dist/). ffmpeg comes from the imageio-ffmpeg wheel, nothing system-wide.
 
 Every capture is the browser window's screen region, so it carries the
 window's rounded corners (with a sliver of whatever is behind them) and its
@@ -19,15 +25,18 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+import imageio_ffmpeg
 from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageStat
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CAPTURE_ROOT = PROJECT_ROOT / ".cache" / "demo"
 GIF_OUT = PROJECT_ROOT / "docs" / "demo.gif"
 STORE_OUT_DIR = PROJECT_ROOT / "docs" / "store"
+VIDEO_OUT = PROJECT_ROOT / "dist" / "demo.mp4"
 
 # In capture pixels (2x points on Retina).
 EDGE_INSET_PX = 2  # window outline
@@ -51,7 +60,15 @@ GIF_LOOP_FOREVER = 0
 GIF_BORDER_PX = 2
 GIF_BORDER_RGB = (0xD0, 0xD7, 0xDE)  # GitHub's light-theme border grey
 
-# Key caption, in GIF pixels.
+VIDEO_SIZE = (1920, 1080)  # 16:9; the 2x capture (about 1596x996) fits unscaled
+VIDEO_FPS = 30
+VIDEO_BACKGROUND_RGB = (0xD6, 0xD6, 0xD6)  # BACKDROP_COLOR in scripts/demo.mjs
+VIDEO_CRF = 18  # x264 quality; visually lossless for UI captures
+VIDEO_PRESET = "slow"
+VIDEO_KEYFRAME_INTERVAL = VIDEO_FPS  # one keyframe per second
+MS_PER_S = 1000
+
+# Key caption, in GIF pixels (scaled up with the image for the video).
 CAPTION_FONT_SIZE = 26
 CAPTION_PAD = (18, 8)  # horizontal, vertical
 CAPTION_RADIUS = 10
@@ -124,7 +141,8 @@ def load_manifest(mode: str) -> dict:
 class CaptionFont:
     """Per-character font fallback across CAPTION_FONTS."""
 
-    def __init__(self, size: int) -> None:
+    def __init__(self, size: int, letter_spacing: float = CAPTION_LETTER_SPACING) -> None:
+        self.letter_spacing = letter_spacing
         self.fonts = []
         for path in CAPTION_FONTS:
             if not path.exists():
@@ -139,21 +157,23 @@ class CaptionFont:
 
     def layout(self, text: str) -> list[tuple[str, ImageFont.FreeTypeFont, float]]:
         """(char, font, advance) per character."""
-        return [(ch, f := self.font_for(ch), f.getlength(ch) + CAPTION_LETTER_SPACING) for ch in text]
+        return [(ch, f := self.font_for(ch), f.getlength(ch) + self.letter_spacing) for ch in text]
 
 
-def draw_caption(image: Image.Image, text: str, font: CaptionFont) -> Image.Image:
+def draw_caption(image: Image.Image, text: str, font: CaptionFont, scale: float) -> Image.Image:
+    """Draw the key caption bottom-centre; `scale` maps GIF pixels to `image` pixels."""
     glyphs = font.layout(text)
-    text_w = sum(adv for _, _, adv in glyphs) - CAPTION_LETTER_SPACING
+    text_w = sum(adv for _, _, adv in glyphs) - font.letter_spacing
     ascent, descent = font.fonts[0].getmetrics()
     text_h = ascent + descent
-    pad_x, pad_y = CAPTION_PAD
+    pad_x, pad_y = round(CAPTION_PAD[0] * scale), round(CAPTION_PAD[1] * scale)
     box_w, box_h = round(text_w) + 2 * pad_x, text_h + 2 * pad_y
     x0 = (image.width - box_w) // 2
-    y0 = image.height - CAPTION_MARGIN_BOTTOM - box_h
+    y0 = image.height - round(CAPTION_MARGIN_BOTTOM * scale) - box_h
     overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
-    draw.rounded_rectangle((x0, y0, x0 + box_w, y0 + box_h), radius=CAPTION_RADIUS, fill=CAPTION_FILL)
+    radius = round(CAPTION_RADIUS * scale)
+    draw.rounded_rectangle((x0, y0, x0 + box_w, y0 + box_h), radius=radius, fill=CAPTION_FILL)
     x = float(x0 + pad_x)
     baseline = y0 + pad_y + ascent
     for ch, f, adv in glyphs:
@@ -173,7 +193,7 @@ def build_gif() -> None:
         height = round(img.height * GIF_WIDTH / img.width)
         img = img.resize((GIF_WIDTH, height), Image.Resampling.LANCZOS)
         if entry["caption"]:
-            img = draw_caption(img, entry["caption"], font)
+            img = draw_caption(img, entry["caption"], font, scale=1.0)
         img = ImageOps.expand(img, border=GIF_BORDER_PX, fill=GIF_BORDER_RGB)
         rgb_frames.append(img)
         hold = int(entry["holdMs"])
@@ -201,6 +221,66 @@ def build_gif() -> None:
     print(f"wrote {GIF_OUT.relative_to(PROJECT_ROOT)} ({len(frames)} frames, {frames[0].width}x{frames[0].height}, {size_kb:.0f} KiB)")
 
 
+def build_video() -> None:
+    """Full-resolution MP4 of the GIF recording, padded to VIDEO_SIZE."""
+    manifest = load_manifest("gif")
+    src_dir = CAPTURE_ROOT / "gif"
+    entries = manifest["frames"]
+    if not entries:
+        raise SystemExit("frames.json lists no frames")
+    windows = [square_corners(checked_capture(src_dir / e["file"])) for e in entries]
+    win_w, win_h = windows[0].size
+    if any(w.size != (win_w, win_h) for w in windows):
+        raise SystemExit("captures differ in size; re-record with `node scripts/demo.mjs gif`")
+    canvas_w, canvas_h = VIDEO_SIZE
+    if win_w > canvas_w or win_h > canvas_h:
+        raise SystemExit(f"capture {win_w}x{win_h} does not fit the {canvas_w}x{canvas_h} video frame")
+    scale = win_w / GIF_WIDTH
+    font = CaptionFont(round(CAPTION_FONT_SIZE * scale), CAPTION_LETTER_SPACING * scale)
+    offset = ((canvas_w - win_w) // 2, (canvas_h - win_h) // 2)
+
+    ffmpeg_cmd = [
+        imageio_ffmpeg.get_ffmpeg_exe(), "-hide_banner", "-loglevel", "error", "-y",
+        "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{canvas_w}x{canvas_h}", "-r", str(VIDEO_FPS), "-i", "-",
+        # sRGB captures -> BT.709 limited range, tagged so players don't guess.
+        "-vf", "scale=out_color_matrix=bt709:out_range=tv,"
+        "setparams=colorspace=bt709:color_primaries=bt709:color_trc=bt709:range=tv",
+        "-c:v", "libx264", "-preset", VIDEO_PRESET, "-crf", str(VIDEO_CRF), "-tune", "stillimage",
+        "-g", str(VIDEO_KEYFRAME_INTERVAL), "-pix_fmt", "yuv420p",
+        "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-color_range", "tv",
+        "-r", str(VIDEO_FPS), "-movflags", "+faststart",
+        str(VIDEO_OUT),
+    ]
+    VIDEO_OUT.parent.mkdir(parents=True, exist_ok=True)
+    proc = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE)
+    assert proc.stdin is not None
+    elapsed_ms = 0
+    written = 0
+    try:
+        for entry, window in zip(entries, windows, strict=True):
+            if entry["caption"]:
+                window = draw_caption(window, entry["caption"], font, scale=scale)
+            canvas = Image.new("RGB", VIDEO_SIZE, VIDEO_BACKGROUND_RGB)
+            canvas.paste(window, offset)
+            raw = canvas.tobytes()
+            # Frame counts from cumulative time, so rounding never drifts.
+            elapsed_ms += int(entry["holdMs"])
+            end_frame = round(elapsed_ms * VIDEO_FPS / MS_PER_S)
+            for _ in range(end_frame - written):
+                proc.stdin.write(raw)
+            written = end_frame
+    finally:
+        proc.stdin.close()
+        returncode = proc.wait()
+    if returncode != 0:
+        raise SystemExit(f"ffmpeg failed with exit code {returncode}")
+    size_mib = VIDEO_OUT.stat().st_size / (1024 * 1024)
+    print(
+        f"wrote {VIDEO_OUT.relative_to(PROJECT_ROOT)} ({canvas_w}x{canvas_h}, {VIDEO_FPS} fps, "
+        f"{written} frames, {written / VIDEO_FPS:.2f} s, {size_mib:.1f} MiB)"
+    )
+
+
 def build_store() -> None:
     manifest = load_manifest("store")
     src_dir = CAPTURE_ROOT / "store"
@@ -215,9 +295,10 @@ def build_store() -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("mode", choices=("gif", "store"))
+    builders = {"gif": build_gif, "video": build_video, "store": build_store}
+    parser.add_argument("mode", choices=tuple(builders))
     args = parser.parse_args()
-    {"gif": build_gif, "store": build_store}[args.mode]()
+    builders[args.mode]()
 
 
 if __name__ == "__main__":

@@ -4,8 +4,9 @@
 //   node scripts/demo.mjs gif    # frames + frames.json in .cache/demo/gif/
 //   node scripts/demo.mjs store  # shots + shots.json in .cache/demo/store/
 //
-// scripts/demo_assemble.py turns those into docs/demo.gif and docs/store/*.png
-// (`make demo-gif`, `make store-assets`).
+// scripts/demo_assemble.py turns those into docs/demo.gif, dist/demo.mp4 (both
+// from the one gif recording) and docs/store/*.png (`make demo-gif`,
+// `make demo-video`, `make store-assets`).
 //
 // Launches Chrome for Testing headful (same local puppeteer install as
 // tests/chrome-smoke.mjs) at a fixed window position with a fresh profile in
@@ -77,9 +78,13 @@ const POPUP_PATH = "/popup.html";
 const EXTENSION_ID_LENGTH = 32;
 const EXTENSION_ID_ALPHABET_START = "a".charCodeAt(0);
 
-// Run (and hidden by Ctrl-L) before anything is captured, so the GIF's
-// random.choice result is the same every time.
+// Store shots only: run (and hidden by Ctrl-L) before anything is captured,
+// so the copy shot's random.choice result is the same every time. The GIF
+// records a fresh session instead (banner visible), so its result varies.
 const RANDOM_SEED = 4;
+// The first-open banner from worker.js, checked (not drawn) before the GIF's
+// popup frame is captured.
+const BANNER_PATTERN = /^Python 3\.\d+\.\d+ \(offline\)\nmath, random, statistics imported$/;
 
 // ---- GIF script -------------------------------------------------------------------
 // Hold times per frame, in milliseconds.
@@ -226,7 +231,8 @@ function capture(bounds, file) {
 
 // ---- popup --------------------------------------------------------------------------
 
-// No banner check: Ctrl-L (prepareSession) clears it along with the transcript.
+// No banner check here: in store mode Ctrl-L (prepareSession) clears it along
+// with the transcript; the GIF checks it separately (waitFirstOpenState).
 function isReadyInPage() {
   const notice = document.getElementById("notice");
   const prompt = document.getElementById("prompt").textContent;
@@ -316,6 +322,23 @@ async function clearScreen(popup) {
     { timeout: STEP_TIMEOUT_MS, polling: "mutation" });
 }
 
+// What a genuine first open shows once Python is ready: the banner and an
+// empty transcript above the prompt.
+async function waitFirstOpenState(popup) {
+  const reached = await popup.waitForFunction((pattern) => {
+    const banner = document.getElementById("banner").textContent;
+    const transcript = document.getElementById("transcript").textContent;
+    return new RegExp(pattern).test(banner) && transcript === "";
+  }, { timeout: STEP_TIMEOUT_MS, polling: "mutation" }, BANNER_PATTERN.source).then(() => true, () => false);
+  if (!reached) {
+    const state = await popup.evaluate(() => ({
+      banner: document.getElementById("banner").textContent,
+      transcript: document.getElementById("transcript").textContent,
+    }));
+    throw new Error(`popup is not in the first-open state: ${JSON.stringify(state)}`);
+  }
+}
+
 async function waitMenu(popup, labels) {
   await popup.waitForFunction((want) => {
     const menu = document.getElementById("menu");
@@ -375,11 +398,14 @@ async function recordGif(outDir) {
     frames.push({ file, holdMs, caption });
   };
   try {
-    await prepareSession(env, []);
+    // No warm-up popup: the recorded one is the profile's first, so it shows
+    // the real first-open state (banner above the prompt). openToolbarPopup
+    // waits for Python to be ready before the frame is taken.
     await focusChrome(env);
     await shoot(HOLD_BROWSER_MS);
 
     popup = await openToolbarPopup(env);
+    await waitFirstOpenState(popup);
     await shoot(HOLD_POPUP_OPEN_MS, CAPTION.open);
 
     for (const ch of GIF_PREFIX) {

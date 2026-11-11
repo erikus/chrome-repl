@@ -18,7 +18,7 @@ SMOKE_DIR := .cache/chrome-test
 # runtime and placed at the zip root by `make zip`.
 NOTICES := $(VENDOR_DIR)/THIRD_PARTY_NOTICES.txt
 
-.PHONY: vendor icons test zip smoke screenshots store-assets demo-gif clean-vendor clean-dist
+.PHONY: vendor icons test zip smoke screenshots store-assets demo-gif demo-video clean-vendor clean-dist
 
 vendor: $(VENDOR_DIR)/pyodide.mjs
 
@@ -67,11 +67,18 @@ store-assets: vendor icons $(SMOKE_DIR)/node_modules/puppeteer/package.json
 	PUPPETEER_CACHE_DIR=$(CURDIR)/$(SMOKE_DIR)/browsers $(NODE) scripts/screenshots.mjs promo
 
 # README demo docs/demo.gif (committed): records the real Chrome window with
-# `screencapture`. macOS only; the terminal needs the Screen Recording
-# permission, and the window's screen area must stay unobstructed.
+# `screencapture`, from a fresh profile so the popup shows the first-open
+# banner. macOS only; the terminal needs the Screen Recording permission, and
+# the window's screen area must stay unobstructed.
 demo-gif: vendor icons $(SMOKE_DIR)/node_modules/puppeteer/package.json
 	PUPPETEER_CACHE_DIR=$(CURDIR)/$(SMOKE_DIR)/browsers $(NODE) scripts/demo.mjs gif
 	$(UV) run scripts/demo_assemble.py gif
+
+# Upload video $(DIST_DIR)/demo.mp4 (1920x1080 H.264, 30 fps, not committed):
+# the same recording as the GIF at full resolution. Assembles the last
+# `make demo-gif` recording in .cache/demo/gif/; it does not record.
+demo-video:
+	$(UV) run scripts/demo_assemble.py video
 
 clean-vendor:
 	rm -rf $(VENDOR_DIR)

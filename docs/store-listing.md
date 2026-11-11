@@ -27,6 +27,9 @@ submission checklist. Assets are generated with `make store-assets` into
    - Small promo tile (440x280):
      [`store/promo-tile-440x280.png`](store/promo-tile-440x280.png)
    - Store icon (128x128): [`../icons/icon128.png`](../icons/icon128.png)
+   - Optional YouTube video: upload `dist/demo.mp4` (`make demo-gif`, then
+     `make demo-video`; same content as the README GIF, 1920x1080) and paste
+     its URL.
 4. **Privacy practices tab:** paste the answers from
    [Privacy practices](#privacy-practices-tab) below. Privacy policy URL:
    <https://github.com/erikus/chrome-repl/blob/main/PRIVACY.md> (merge
