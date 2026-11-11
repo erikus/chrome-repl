@@ -60,7 +60,16 @@ are in [`docs/store-listing.md`](docs/store-listing.md).
 
 `vendor/`, `dist/`, and `.cache/` are generated at build time and gitignored.
 
+## Install
+
+Install **Python REPL** from the
+[Chrome Web Store](https://chromewebstore.google.com/detail/python-repl/ginmafgfgfjmplggiohjenfmfipopcae),
+then pin it from the toolbar's puzzle-piece menu and click it to open.
+
 ## Install (Unpacked)
+
+To run from source instead:
+
 
 1. Run `make vendor icons`.
 2. Open `chrome://extensions` and enable **Developer mode** (top right).

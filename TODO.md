@@ -10,8 +10,8 @@
   2026-11-11). Listing material is in
   [`docs/store-listing.md`](docs/store-listing.md). Keep `PRIVACY.md` at its
   path on `main`: the listing links to it.
-- [ ] **Add the store install link to the README** above "Install
-  (Unpacked)", now that the listing is live.
+- [x] **Add the store install link to the README**: the "Install" section
+  above "Install (Unpacked)" links to the listing.
 - [ ] **Ship the three-colour icon.** `icons/` now has the purple tile with
   blue and yellow stripes, but 0.1.0 on the store still carries the old icon.
   Bump the version, upload a new zip, and replace the store icon, promo tile

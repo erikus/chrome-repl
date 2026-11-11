@@ -37,9 +37,9 @@ submission checklist. Assets are generated with `make store-assets` into
 5. **Distribution tab:** Free; Public; all regions.
 6. **Submit for review.** Reviews typically take a few days; the dashboard
    emails the account on approval or rejection.
-7. **Once live:** add the store install link to the README (replace the
-   unpacked-install instructions as the primary path) and close the TODO
-   entry.
+7. **Once live:** add the store install link to the README (done: the
+   listing is live at
+   <https://chromewebstore.google.com/detail/python-repl/ginmafgfgfjmplggiohjenfmfipopcae>).
 
 For later updates: bump `version` in `manifest.json`, `make zip`, and upload
 the new zip under **Package**. Regenerate assets with `make store-assets` if
