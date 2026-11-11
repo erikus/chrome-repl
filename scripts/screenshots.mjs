@@ -77,18 +77,30 @@ const SCENES = [
 // The Web Store's small promo tile is exactly 440x280. Rendered at device
 // scale 1 so CSS px == image px.
 const PROMO_TILE_SIZE = { width: 440, height: 280 };
-// Palette from the icon (scripts/gen_icons.py BACKGROUND_RGB, GLYPH_RGB).
+// Palette from the icon (scripts/gen_icons.py BACKGROUND_RGB, GLYPH_RGB,
+// PYTHON_BLUE_RGB, PYTHON_YELLOW_RGB). Colours only: no Python logo.
 const BRAND = {
   // Solid on purpose: CSS gradients are dithered nondeterministically (+-1 LSB
   // run to run), which would churn the committed PNGs.
   backdrop: "#654ff0",
+  stripeTop: "#3776ab",
+  stripeBottom: "#ffd43b",
   text: "#ffffff",
   dim: "rgba(255, 255, 255, 0.85)",
+  plate: "#ffffff",
 };
+// Blue-over-yellow stripes along the bottom edge, echoing the icon's. Whole
+// px so the edges stay crisp.
+const PROMO_STRIPE_PX = 18;
 // The icon is a purple tile too; a white plate keeps its notched outline
 // visible on the purple backdrop.
-const PROMO_ICON_PX = 104;
-const PROMO_PLATE_PAD_PX = 10;
+const PROMO_ICON_PX = 96;
+const PROMO_PLATE_PAD_PX = 8;
+const PROMO_PLATE_RADIUS_PX = 20;
+const PROMO_NAME_GAP_PX = 16;
+const PROMO_NAME_FONT_PX = 36;
+const PROMO_TAGLINE_GAP_PX = 4;
+const PROMO_TAGLINE_FONT_PX = 17;
 const SANS = `-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif`;
 const PROMO_TILE = {
   file: "promo-tile-440x280.png",
@@ -111,17 +123,26 @@ function promoTileHtml(iconUrl) {
   body {
     background: ${BRAND.backdrop};
     font-family: ${SANS}; color: ${BRAND.text};
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    display: flex; flex-direction: column;
   }
-  .plate { padding: ${PROMO_PLATE_PAD_PX}px; border-radius: 22px; background: #ffffff;
+  /* The content is centred in the purple field above the stripes. */
+  .field { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .stripe { flex: 0 0 ${PROMO_STRIPE_PX}px; }
+  .stripe.top { background: ${BRAND.stripeTop}; }
+  .stripe.bottom { background: ${BRAND.stripeBottom}; }
+  .plate { padding: ${PROMO_PLATE_PAD_PX}px; border-radius: ${PROMO_PLATE_RADIUS_PX}px; background: ${BRAND.plate};
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
   img { display: block; width: ${PROMO_ICON_PX}px; height: ${PROMO_ICON_PX}px; }
-  h1 { margin: 20px 0 0; font-size: 36px; font-weight: 700; }
-  p { margin: 6px 0 0; font-size: 17px; color: ${BRAND.dim}; }
+  h1 { margin: ${PROMO_NAME_GAP_PX}px 0 0; font-size: ${PROMO_NAME_FONT_PX}px; font-weight: 700; line-height: 1.1; }
+  p { margin: ${PROMO_TAGLINE_GAP_PX}px 0 0; font-size: ${PROMO_TAGLINE_FONT_PX}px; color: ${BRAND.dim}; }
 </style></head><body>
-  <div class="plate"><img src="${iconUrl}" alt=""></div>
-  <h1>${escapeHtml(PROMO_TILE.name)}</h1>
-  <p>${escapeHtml(PROMO_TILE.tagline)}</p>
+  <div class="field">
+    <div class="plate"><img src="${iconUrl}" alt=""></div>
+    <h1>${escapeHtml(PROMO_TILE.name)}</h1>
+    <p>${escapeHtml(PROMO_TILE.tagline)}</p>
+  </div>
+  <div class="stripe top"></div>
+  <div class="stripe bottom"></div>
 </body></html>`;
 }
 
