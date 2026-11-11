@@ -5,7 +5,8 @@
 """Generate icons/icon{16,48,128}.png: a white ">>>" on a WebAssembly-style tile.
 
 The tile echoes the WebAssembly logo: a purple square with a semicircular
-notch cut out of the top edge.
+notch cut out of the top edge. Two stripes along the bottom, blue over yellow,
+use the Python colours (only the colours; the Python logo is not used).
 
 Usage:
     uv run scripts/gen_icons.py
@@ -28,6 +29,15 @@ ICONS_DIR = PROJECT_ROOT / "icons"
 SUPERSAMPLE = 4  # samples per axis per pixel
 BACKGROUND_RGB = (0x65, 0x4F, 0xF0)  # WebAssembly purple (#654FF0)
 GLYPH_RGB = (0xFF, 0xFF, 0xFF)  # white
+PYTHON_BLUE_RGB = (0x37, 0x76, 0xAB)  # #3776AB
+PYTHON_YELLOW_RGB = (0xFF, 0xD4, 0x3B)  # #FFD43B
+# Bottom stripes as (top edge in unit coordinates, colour), top to bottom; each
+# runs down to the next stripe or the bottom edge. The edges are multiples of
+# 1/16 so they land on whole pixels at every size in ICON_SIZES.
+STRIPES = (
+    (12 / 16, PYTHON_BLUE_RGB),
+    (14 / 16, PYTHON_YELLOW_RGB),
+)
 CORNER_RADIUS_FRAC = 0.10  # of the icon size
 # Semicircular notch centred on the top edge, as in the WebAssembly logo.
 NOTCH_CENTER = (0.5, 0.0)
@@ -36,8 +46,8 @@ CHEVRON_COUNT = 3
 # Glyph geometry in unit coordinates (0..1 of the icon size).
 GLYPH_LEFT = 0.14
 GLYPH_RIGHT = 0.86
-GLYPH_CENTER_Y = 0.58  # below centre, to clear the notch
-CHEVRON_HALF_HEIGHT = 0.20
+GLYPH_CENTER_Y = 0.49  # between the notch and the stripes
+CHEVRON_HALF_HEIGHT = 0.19
 CHEVRON_WIDTH_FRAC = 0.62  # chevron width as a fraction of the per-chevron pitch
 STROKE_WIDTH = 0.085
 # Small sizes need a relatively thicker stroke to stay legible.
@@ -50,6 +60,9 @@ PNG_FILTER_NONE = 0
 ZLIB_LEVEL = 9
 
 Point = tuple[float, float]
+Rgb = tuple[int, int, int]
+
+RGB_CHANNELS = 3
 
 
 def segment_distance(p: Point, a: Point, b: Point) -> float:
@@ -88,6 +101,15 @@ def inside_tile(x: float, y: float, radius: float) -> bool:
     return (x - cx) ** 2 + (y - cy) ** 2 <= radius * radius
 
 
+def tile_rgb(y: float) -> Rgb:
+    """Tile colour at unit height y: the background, or the stripe covering y."""
+    rgb = BACKGROUND_RGB
+    for top, stripe_rgb in STRIPES:
+        if y >= top:
+            rgb = stripe_rgb
+    return rgb
+
+
 def render(size: int) -> bytes:
     """Return raw RGBA rows (with PNG filter bytes) for one icon size."""
     segments = chevron_segments()
@@ -98,7 +120,7 @@ def render(size: int) -> bytes:
         rows.append(PNG_FILTER_NONE)
         for px in range(size):
             tile_hits = 0
-            glyph_hits = 0
+            rgb_sums = [0] * RGB_CHANNELS
             for sy in range(SUPERSAMPLE):
                 for sx in range(SUPERSAMPLE):
                     x = (px + (sx + 0.5) / SUPERSAMPLE) / size
@@ -106,14 +128,15 @@ def render(size: int) -> bytes:
                     if not inside_tile(x, y, CORNER_RADIUS_FRAC):
                         continue
                     tile_hits += 1
-                    if min(segment_distance((x, y), a, b) for a, b in segments) <= half_stroke:
-                        glyph_hits += 1
-            alpha = tile_hits / samples_total
+                    on_glyph = min(segment_distance((x, y), a, b) for a, b in segments) <= half_stroke
+                    sample_rgb = GLYPH_RGB if on_glyph else tile_rgb(y)
+                    for channel in range(RGB_CHANNELS):
+                        rgb_sums[channel] += sample_rgb[channel]
             if tile_hits == 0:
                 rows += bytes((0, 0, 0, 0))
                 continue
-            mix = glyph_hits / tile_hits
-            rgb = [round(bg + (fg - bg) * mix) for bg, fg in zip(BACKGROUND_RGB, GLYPH_RGB, strict=True)]
+            alpha = tile_hits / samples_total
+            rgb = [round(channel_sum / tile_hits) for channel_sum in rgb_sums]
             rows += bytes((*rgb, round(alpha * 255)))
     return bytes(rows)
 
@@ -133,7 +156,15 @@ def encode_png(size: int, raw_rows: bytes) -> bytes:
     )
 
 
+def check_stripes() -> None:
+    """Fail before rendering if STRIPES is not ordered top to bottom inside the tile."""
+    tops = [top for top, _ in STRIPES]
+    if tops != sorted(tops) or any(not 0.0 < top < 1.0 for top in tops):
+        raise ValueError(f"STRIPES tops must ascend within (0, 1): {tops}")
+
+
 def main() -> None:
+    check_stripes()
     ICONS_DIR.mkdir(parents=True, exist_ok=True)
     for size in ICON_SIZES:
         out = ICONS_DIR / f"icon{size}.png"
