@@ -12,11 +12,11 @@
   path on `main`: the listing links to it.
 - [x] **Add the store install link to the README**: the "Install" section
   above "Install (Unpacked)" links to the listing.
-- [ ] **Ship the three-colour icon.** `icons/` now has the purple tile with
-  blue and yellow stripes, but 0.1.0 on the store still carries the old icon.
-  Bump the version, upload a new zip, and replace the store icon, promo tile
-  and screenshots in the dashboard from `docs/store/`; add the YouTube demo
-  link (`make demo-video`) to the listing.
+- [ ] **Ship the three-colour icon.** 0.1.0 on the store still carries the old
+  icon. Version 0.1.1 (tag `v0.1.1`) packages the new one: upload
+  `dist/python-repl-0.1.1.zip` (`make zip`) under **Package**, and replace the
+  store icon, promo tile and screenshots in the dashboard from `docs/store/`;
+  add the YouTube demo link (`make demo-video`) to the listing.
 - [x] Autocomplete UX for long candidate lists (e.g. `math.<tab><tab>`):
   replaced the transcript listing with a transient, filter-as-you-type menu
   above the input line.
